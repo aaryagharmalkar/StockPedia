@@ -1,4 +1,8 @@
+// src/App.jsx
 import React, { useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+
+import { HomePage } from "./components/HomePage";
 import { StockTicker } from "./components/StockTicker";
 import { MarketWatch } from "./components/MarketWatch";
 import { Portfolio } from "./components/Portfolio";
@@ -20,33 +24,60 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen w-screen bg-gray-100 overflow-x-hidden">
-      <div className="w-full p-4 sm:p-6 lg:p-8 space-y-6">
-        {/* Stock Ticker */}
-        <StockTicker />
+    <Router>
+      <div className="min-h-screen w-screen bg-gray-100 overflow-x-hidden">
+        {/* Navbar */}
+        <nav className="bg-gray-900 text-white p-4 flex justify-between items-center">
+          <div className="text-2xl font-bold">StockPedia</div>
+          <div className="flex gap-4">
+            <Link className="hover:text-gray-300" to="/">Home</Link>
+            <Link className="hover:text-gray-300" to="/market-watch">Market Watch</Link>
+            <Link className="hover:text-gray-300" to="/portfolio">Portfolio</Link>
+            <Link className="hover:text-gray-300" to="/wallet">Wallet</Link>
+          </div>
+        </nav>
 
-        {/* MarketWatch + Wallet Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <MarketWatch onStockSelect={handleStockSelect} selectedStock={selectedStock} />
-          </div>
-          <div>
-            <Wallet />
-          </div>
+        {/* Main Content */}
+        <div className="w-full space-y-6">
+          <Routes>
+            {/* Home page */}
+            <Route path="/" element={<HomePage />} />
+
+            {/* Other sections */}
+            <Route
+              path="/market-watch"
+              element={
+                <MarketWatch
+                  onStockSelect={handleStockSelect}
+                  selectedStock={selectedStock}
+                />
+              }
+            />
+            <Route path="/portfolio" element={<Portfolio />} />
+            <Route path="/wallet" element={<Wallet />} />
+            <Route
+              path="/stock-chart"
+              element={
+                <StockChart
+                  symbol={stockData.symbol}
+                  currentPrice={stockData.currentPrice}
+                  change={stockData.change}
+                  predictedPrice={stockData.predictedPrice}
+                />
+              }
+            />
+            <Route
+              path="*"
+              element={
+                <div className="text-center text-gray-700 mt-20">
+                  Page not found
+                </div>
+              }
+            />
+          </Routes>
         </div>
-
-        {/* Stock Chart */}
-        <StockChart
-          symbol={stockData.symbol}
-          currentPrice={stockData.currentPrice}
-          change={stockData.change}
-          predictedPrice={stockData.predictedPrice}
-        />
-
-        {/* Portfolio */}
-        <Portfolio />
       </div>
-    </div>
+    </Router>
   );
 }
 

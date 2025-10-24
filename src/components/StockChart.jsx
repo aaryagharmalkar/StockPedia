@@ -248,9 +248,6 @@ export function StockChart({ symbol, currentPrice, change, predictedPrice }) {
             <button className="py-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-xl transition-colors">
               Predict
             </button>
-            <button className="py-4 bg-blue-900 hover:bg-blue-800 rounded-lg font-bold text-xl transition-colors">
-              •••
-            </button>
           </div>
         </div>
       </div>

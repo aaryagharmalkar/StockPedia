@@ -1,23 +1,38 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { StockChart } from "./StockChart";
 
 const watchlist = [
   { symbol: "RELIANCE", price: 2715.0, previousPrice: 2646, change: 0.52 },
-  { symbol: "TCS", price: 3340.0, previousPrice: 926, change: 0.73 },
-  { symbol: "HDFC", price: 2650.35, previousPrice: 2956, change: 0.37 },
+  { symbol: "TCS", price: 3340.0, previousPrice: 3260, change: 0.73 },
+  { symbol: "HDFC", price: 2650.35, previousPrice: 2596, change: 0.37 },
 ];
 
 export const MarketWatch = ({ onStockSelect, selectedStock }) => {
+  const [chartStock, setChartStock] = useState(selectedStock || watchlist[0].symbol);
+
+  // Sync with parent selectedStock
+  useEffect(() => {
+    if (selectedStock) setChartStock(selectedStock);
+  }, [selectedStock]);
+
+  const handleSelect = (symbol) => {
+    setChartStock(symbol);
+    onStockSelect?.(symbol);
+  };
+
+  const stockData = watchlist.find((s) => s.symbol === chartStock) || watchlist[0];
+
   return (
-    <div className="p-6 bg-white rounded-lg shadow-md">
-      <h3 className="text-lg font-semibold mb-4 text-gray-800">Market Watch</h3>
+    <div className="p-6 bg-white rounded-lg shadow-md space-y-6">
+      {/* Market Watch Header */}
+      <h3 className="text-lg font-semibold text-gray-800">Market Watch</h3>
 
       {/* Search Input */}
-      <div className="relative mb-4">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+      <div className="mb-4">
         <input
           type="text"
           placeholder="Search"
-          className="pl-10 p-2 w-full border rounded bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="pl-3 p-2 w-full border rounded bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
         />
       </div>
 
@@ -26,9 +41,9 @@ export const MarketWatch = ({ onStockSelect, selectedStock }) => {
         {watchlist.map((stock) => (
           <div
             key={stock.symbol}
-            onClick={() => onStockSelect?.(stock.symbol)}
+            onClick={() => handleSelect(stock.symbol)}
             className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-              selectedStock === stock.symbol
+              chartStock === stock.symbol
                 ? "bg-blue-100 border border-blue-200"
                 : "hover:bg-gray-100"
             }`}
@@ -53,6 +68,16 @@ export const MarketWatch = ({ onStockSelect, selectedStock }) => {
         <span className="mr-2">➕</span>
         Add to Watchlist
       </button>
+
+      {/* Inline Stock Chart */}
+      <div className="mt-6">
+        <StockChart
+          symbol={stockData.symbol}
+          currentPrice={stockData.price}
+          change={stockData.change}
+          predictedPrice={Math.round(stockData.price * 1.02)} // Example prediction
+        />
+      </div>
     </div>
   );
 };
