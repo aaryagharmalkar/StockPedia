@@ -1,58 +1,66 @@
 // src/components/HeroSection.jsx
 import React from "react";
 import { ArrowRight, TrendingUp, BarChart3, Sparkles } from "lucide-react";
-import LiquidEther from './LiquidEther';
+import DotGrid from "./DotGrid";
+import BlurText from "./BlurText";
+import ShinyText from "./ShinyText";
 
 export function HeroSection() {
+  const handleAnimationComplete = () => {
+    console.log("Hero animation completed!");
+  };
+
   return (
     <div className="relative w-full h-screen overflow-hidden">
-      {/* Liquid Ether Background */}
+      {/* Background */}
       <div className="absolute inset-0">
-        <LiquidEther
-          colors={['#5227FF', '#FF9FFC', '#B19EEF']}
-          mouseForce={20}
-          cursorSize={100}
-          isViscous={false}
-          viscous={30}
-          iterationsViscous={32}
-          iterationsPoisson={32}
-          resolution={0.5}
-          isBounce={false}
-          autoDemo={true}
-          autoSpeed={0.5}
-          autoIntensity={2.2}
-          takeoverDuration={0.25}
-          autoResumeDelay={3000}
-          autoRampDuration={0.6}
+        <DotGrid
+          dotSize={10}
+          gap={15}
+          baseColor="#271e37"
+          activeColor="#b19eeF"
+          proximity={175}
+          shockRadius={250}
+          shockStrength={5}
+          resistance={750}
+          returnDuration={1.5}
         />
       </div>
 
-      {/* Hero Content Overlay */}
+      {/* Hero Content */}
       <div className="relative z-10 h-full flex items-center justify-center">
         <div className="max-w-5xl mx-auto px-6 text-center">
-          {/* Main Heading */}
+
+          {/* Small tag above heading */}
           <div className="mb-6">
-            <div className=" text-black inline-flex items-center gap-2 px-4 py-2 bg-white bg-opacity-10 backdrop-blur-sm rounded-full mb-8 border border-white border-opacity-20">
+            <div className="text-black inline-flex items-center gap-2 px-4 py-2 bg-white bg-opacity-10 backdrop-blur-sm rounded-full mb-8 border border-white border-opacity-20">
               <Sparkles className="w-4 h-4 text-purple-300" />
               <span className="text-sm font-medium text-white">AI-Powered Trading Platform</span>
             </div>
           </div>
-          
-          <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-6 leading-tight">
-            Trade Smarter
-            <br />
-            <span className="bg-gradient-to-r from-purple-300 via-pink-300 to-blue-300 bg-clip-text text-transparent">
-              With AI Insights
-            </span>
-          </h1>
-          
-          <p className="text-xl md:text-2xl text-gray-200 mb-12 max-w-3xl mx-auto leading-relaxed">
-            Get real-time predictions, market analysis, and personalized trading strategies powered by advanced artificial intelligence.
-          </p>
 
-          {/* CTA Buttons */}
+          {/* ✨ Animated Heading using BlurText */}
+          <BlurText
+            text="      StockPedia"
+            delay={120}
+            animateBy="words"
+            direction="top"
+            onAnimationComplete={handleAnimationComplete}
+            className="text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-6 leading-tight"
+          />
+
+          {/* 🌟 Shiny Subheading using ShinyText */}
+          <div className="text-xl md:text-2xl mb-12 max-w-3xl mx-auto leading-relaxed">
+            <ShinyText
+              text="Get real-time predictions, market analysis, and personalized trading strategies powered by advanced artificial intelligence."
+              speed={4}
+              className="text-gray-200"
+            />
+          </div>
+
+          {/* Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-            <button className="group px-8 py-4 bg-white text-gray-900 rounded-full font-bold text-lg hover:bg-opacity-90 transition-all duration-300 flex items-center gap-2 shadow-2xl hover:shadow-purple-500/50 hover:scale-105">
+            <button className="group px-5 py-4 bg-white text-gray-900 rounded-full font-bold text-lg hover:bg-opacity-90 transition-all duration-300 flex items-center gap-2 shadow-2xl hover:shadow-purple-500/50 hover:scale-105">
               Start Trading
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>

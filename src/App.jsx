@@ -1,13 +1,15 @@
 // src/App.jsx
 import React, { useState } from "react";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+
+import PillNav from "./components/PillNav";
+import logo from "./assets/logo.jpg";
 
 import { HomePage } from "./components/HomePage";
-import { StockTicker } from "./components/StockTicker";
 import { MarketWatch } from "./components/MarketWatch";
 import { Portfolio } from "./components/Portfolio";
-import { StockChart } from "./components/StockChart";
 import { Wallet } from "./components/Wallet";
+import { StockChart } from "./components/StockChart";
 
 function App() {
   const [selectedStock, setSelectedStock] = useState(null);
@@ -25,25 +27,34 @@ function App() {
 
   return (
     <Router>
-      <div className="min-h-screen w-screen bg-gray-100 overflow-x-hidden">
-        {/* Navbar */}
-        <nav className="bg-gray-900 text-white p-4 flex justify-between items-center">
-          <div className="text-2xl font-bold">StockPedia</div>
-          <div className="flex gap-4">
-            <Link className="hover:text-gray-300" to="/">Home</Link>
-            <Link className="hover:text-gray-300" to="/market-watch">Market Watch</Link>
-            <Link className="hover:text-gray-300" to="/portfolio">Portfolio</Link>
-            <Link className="hover:text-gray-300" to="/wallet">Wallet</Link>
-          </div>
-        </nav>
+      {/* Full-page dark gradient background */}
+      <div className="min-h-screen w-screen bg-gradient-to-b from-[#0f1626] to-[#1a1a2e] relative overflow-x-hidden">
 
-        {/* Main Content */}
-        <div className="w-full space-y-6">
+        {/* Navbar fixed at top-left */}
+        <div className="fixed top-4 left-4 z-[999]">
+          <PillNav
+            logo={logo}
+            logoAlt="StockPedia Logo"
+            items={[
+              { label: "Home", href: "/" },
+              { label: "Market Watch", href: "/market-watch" },
+              { label: "Portfolio", href: "/portfolio" },
+              { label: "Wallet", href: "/wallet" },
+            ]}
+            activeHref={window.location.pathname}
+            className="bg-transparent"
+            ease="power2.easeOut"
+            baseColor="#0f1626"
+            pillColor="#1a1a2e"
+            hoveredPillTextColor="#ffffff"
+            pillTextColor="#c0c0ff"
+          />
+        </div>
+
+        {/* Main content */}
+        <div className="pt-[5rem] w-full">
           <Routes>
-            {/* Home page */}
             <Route path="/" element={<HomePage />} />
-
-            {/* Other sections */}
             <Route
               path="/market-watch"
               element={
@@ -69,7 +80,7 @@ function App() {
             <Route
               path="*"
               element={
-                <div className="text-center text-gray-700 mt-20">
+                <div className="text-center text-white mt-20">
                   Page not found
                 </div>
               }
