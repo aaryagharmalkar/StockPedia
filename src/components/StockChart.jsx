@@ -1,7 +1,38 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from './SupabaseClient';
 
 export function StockChart({ symbol, currentPrice, change, predictedPrice }) {
   const [activeTab, setActiveTab] = useState('prediction');
+  const [showBuyModal, setShowBuyModal] = useState(false);
+  const [showSellModal, setShowSellModal] = useState(false);
+  const [quantity, setQuantity] = useState(1);
+  const [processing, setProcessing] = useState(false);
+  const [portfolioHoldings, setPortfolioHoldings] = useState([]);
+  const [totalOwnedShares, setTotalOwnedShares] = useState(0);
+
+  // Fetch user's portfolio holdings for this stock
+  useEffect(() => {
+    const fetchHoldings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('portfolio')
+          .select('*')
+          .eq('symbol', symbol);
+
+        if (error) throw error;
+
+        setPortfolioHoldings(data || []);
+        const total = (data || []).reduce((sum, holding) => sum + holding.quantity, 0);
+        setTotalOwnedShares(total);
+      } catch (err) {
+        console.error('Error fetching holdings:', err);
+      }
+    };
+
+    if (symbol) {
+      fetchHoldings();
+    }
+  }, [symbol]);
 
   // Generate candlestick data
   const generateCandlestickData = () => {
@@ -72,6 +103,118 @@ export function StockChart({ symbol, currentPrice, change, predictedPrice }) {
     return `${scaleX(i)},${scaleY(price)}`;
   }).filter(p => p !== null).join(' L ');
 
+  // Handle quantity change
+  const handleQuantityChange = (value) => {
+    const num = parseInt(value) || 0;
+    setQuantity(Math.max(0, num));
+  };
+
+  // Handle buy stock
+  const handleBuyStock = async () => {
+    if (quantity <= 0) return;
+
+    setProcessing(true);
+    try {
+      const totalPrice = currentPrice * quantity;
+      
+      const { data, error } = await supabase
+        .from("portfolio")
+        .insert([
+          {
+            symbol: symbol,
+            name: symbol, // You might want to pass the full name as a prop
+            quantity: quantity,
+            buy_price: currentPrice,
+            total_cost: totalPrice,
+            currency: "INR",
+            purchase_date: new Date().toISOString(),
+          },
+        ]);
+
+      if (error) throw error;
+
+      alert(`Successfully bought ${quantity} shares of ${symbol}`);
+      setShowBuyModal(false);
+      setQuantity(1);
+      
+      // Refresh holdings
+      const { data: holdings } = await supabase
+        .from('portfolio')
+        .select('*')
+        .eq('symbol', symbol);
+      setPortfolioHoldings(holdings || []);
+      const total = (holdings || []).reduce((sum, holding) => sum + holding.quantity, 0);
+      setTotalOwnedShares(total);
+    } catch (err) {
+      console.error("Error buying stock:", err);
+      alert(`Failed to buy stock: ${err.message}`);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Handle sell stock
+  const handleSellStock = async () => {
+    if (quantity <= 0 || quantity > totalOwnedShares) {
+      alert('Invalid quantity');
+      return;
+    }
+
+    setProcessing(true);
+    try {
+      let remainingToSell = quantity;
+      
+      // Sell using FIFO (First In First Out)
+      for (const holding of portfolioHoldings.sort((a, b) => 
+        new Date(a.purchase_date) - new Date(b.purchase_date)
+      )) {
+        if (remainingToSell <= 0) break;
+
+        if (holding.quantity <= remainingToSell) {
+          // Delete entire holding
+          const { error } = await supabase
+            .from('portfolio')
+            .delete()
+            .eq('id', holding.id);
+          
+          if (error) throw error;
+          remainingToSell -= holding.quantity;
+        } else {
+          // Update holding with reduced quantity
+          const newQuantity = holding.quantity - remainingToSell;
+          const { error } = await supabase
+            .from('portfolio')
+            .update({
+              quantity: newQuantity,
+              total_cost: holding.buy_price * newQuantity
+            })
+            .eq('id', holding.id);
+          
+          if (error) throw error;
+          remainingToSell = 0;
+        }
+      }
+
+      alert(`Successfully sold ${quantity} shares of ${symbol}`);
+      setShowSellModal(false);
+      setQuantity(1);
+      
+      // Refresh holdings
+      const { data: holdings } = await supabase
+        .from('portfolio')
+        .select('*')
+        .eq('symbol', symbol);
+      setPortfolioHoldings(holdings || []);
+      const total = (holdings || []).reduce((sum, holding) => sum + holding.quantity, 0);
+      setTotalOwnedShares(total);
+    } catch (err) {
+      console.error("Error selling stock:", err);
+      alert(`Failed to sell stock: ${err.message}`);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   return (
     <div className="bg-gray-900 rounded-lg p-6 text-white">
       {/* Header */}
@@ -83,6 +226,11 @@ export function StockChart({ symbol, currentPrice, change, predictedPrice }) {
             {change >= 0 ? '+' : ''}{change}%
           </span>
         </div>
+        {totalOwnedShares > 0 && (
+          <div className="mt-2 text-sm text-gray-400">
+            You own: <span className="text-white font-semibold">{totalOwnedShares} shares</span>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -238,19 +386,193 @@ export function StockChart({ symbol, currentPrice, change, predictedPrice }) {
             <span className="text-white font-bold text-2xl">₹{predictedPrice.toLocaleString()}</span>
           </div>
           
-          <div className="grid grid-cols-4 gap-4">
-            <button className="py-4 bg-green-600 hover:bg-green-700 rounded-lg font-bold text-xl transition-colors">
+          <div className={`grid gap-4 ${totalOwnedShares > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            <button 
+              onClick={() => setShowBuyModal(true)}
+              className="py-4 bg-green-600 hover:bg-green-700 rounded-lg font-bold text-xl transition-colors"
+            >
               Buy
             </button>
-            <button className="py-4 bg-red-600 hover:bg-red-700 rounded-lg font-bold text-xl transition-colors">
-              Sell
-            </button>
-            <button className="py-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-xl transition-colors">
-              Predict
-            </button>
+            {totalOwnedShares > 0 && (
+              <button 
+                onClick={() => setShowSellModal(true)}
+                className="py-4 bg-red-600 hover:bg-red-700 rounded-lg font-bold text-xl transition-colors"
+              >
+                Sell
+              </button>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Buy Modal */}
+      {showBuyModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-gray-800">
+                Buy {symbol}
+              </h3>
+              <button
+                onClick={() => setShowBuyModal(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <div className="text-2xl font-bold text-gray-800">
+                ₹{currentPrice?.toFixed(2) || "0.00"}
+              </div>
+              <div className={`text-sm ${change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {change >= 0 ? '+' : ''}{change?.toFixed(2) || "0.00"}%
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Quantity
+              </label>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  className="w-10 h-10 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-xl font-semibold"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min="1"
+                  value={quantity}
+                  onChange={(e) => handleQuantityChange(e.target.value)}
+                  className="flex-1 text-center text-lg font-semibold border-2 border-gray-300 rounded p-2 focus:outline-none focus:border-blue-500 text-gray-800"
+                />
+                <button
+                  onClick={() => setQuantity(quantity + 1)}
+                  className="w-10 h-10 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-xl font-semibold"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 p-4 rounded mb-4">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Total Cost:</span>
+                <span className="text-2xl font-bold text-gray-800">
+                  ₹{((currentPrice || 0) * quantity).toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowBuyModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBuyStock}
+                disabled={processing || quantity <= 0}
+                className="flex-1 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                {processing ? "Processing..." : "Confirm Buy"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sell Modal */}
+      {showSellModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-gray-800">
+                Sell {symbol}
+              </h3>
+              <button
+                onClick={() => setShowSellModal(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <div className="text-2xl font-bold text-gray-800">
+                ₹{currentPrice?.toFixed(2) || "0.00"}
+              </div>
+              <div className={`text-sm ${change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {change >= 0 ? '+' : ''}{change?.toFixed(2) || "0.00"}%
+              </div>
+              <div className="text-sm text-gray-600 mt-2">
+                Available: {totalOwnedShares} shares
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Quantity
+              </label>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  className="w-10 h-10 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-xl font-semibold"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min="1"
+                  max={totalOwnedShares}
+                  value={quantity}
+                  onChange={(e) => handleQuantityChange(e.target.value)}
+                  className="flex-1 text-center text-lg font-semibold border-2 border-gray-300 rounded p-2 focus:outline-none focus:border-blue-500 text-gray-800"
+                />
+                <button
+                  onClick={() => setQuantity(Math.min(totalOwnedShares, quantity + 1))}
+                  className="w-10 h-10 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-xl font-semibold"
+                >
+                  +
+                </button>
+              </div>
+              {quantity > totalOwnedShares && (
+                <p className="text-red-500 text-sm mt-2">
+                  Cannot sell more than you own
+                </p>
+              )}
+            </div>
+
+            <div className="bg-gray-50 p-4 rounded mb-4">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Total Value:</span>
+                <span className="text-2xl font-bold text-gray-800">
+                  ₹{((currentPrice || 0) * quantity).toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowSellModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSellStock}
+                disabled={processing || quantity <= 0 || quantity > totalOwnedShares}
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                {processing ? "Processing..." : "Confirm Sell"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

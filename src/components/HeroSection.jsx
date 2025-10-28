@@ -66,15 +66,7 @@ export function HeroSection() {
   </div>
 </div>
 
-          {/* 🔐 Single Login Button */}
-          <button
-  onClick={() => navigate("/login")}
-  className="px-8 py-3 rounded-full text-lg font-semibold text-white bg-gradient-to-r from-[#B88BFF] to-[#FFD3E0] 
-             shadow-lg hover:shadow-[0_0_25px_rgba(184,139,255,0.8)] 
-             transform hover:scale-105 transition-all duration-500 ease-out"
->
-  Login / Signup
-</button>
+          
         </div>
       </div>
 

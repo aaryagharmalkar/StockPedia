@@ -142,48 +142,54 @@ export function HomePage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 text-white space-y-8">
       <HeroSection />
 
-      {/* 🔐 Login/User Profile Button */}
-      <div className="fixed top-5 right-5 z-50">
-        {user ? (
-          <div className="relative">
-            <button
-              onClick={() => setShowDropdown(!showDropdown)}
-              className="flex items-center gap-2 bg-gradient-to-r from-[#B88BFF] to-[#FFD3E0] text-white font-semibold px-5 py-2 rounded-lg shadow-lg transition-all hover:scale-105"
-            >
-              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                <User className="w-5 h-5" />
-              </div>
-              <span>{username}</span>
-            </button>
-            {showDropdown && (
-              <div className="absolute right-0 mt-2 w-48 bg-gray-900 rounded-lg shadow-xl border border-gray-700 overflow-hidden">
-                <button
-                  onClick={() => navigate("/portfolio")}
-                  className="w-full text-left px-4 py-3 hover:bg-gray-800 transition-colors flex items-center gap-2"
-                >
-                  <User className="w-4 h-4" />
-                  Portfolio
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left px-4 py-3 hover:bg-gray-800 transition-colors flex items-center gap-2 text-red-400"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Logout
-                </button>
-              </div>
-            )}
-          </div>
-        ) : (
+      {/* 🔐 Login/User Profile Button (fixed top-right corner) */}
+<div className="fixed top-5 right-5 z-50">
+  {user ? (
+    <div className="relative">
+      <button
+        onClick={() => setShowDropdown(!showDropdown)}
+        className="flex items-center gap-2 px-8 py-3 rounded-full text-lg font-semibold text-white 
+                   bg-gradient-to-r from-[#B88BFF] to-[#FFD3E0]
+                   shadow-lg hover:shadow-[0_0_25px_rgba(184,139,255,0.8)]
+                   transform hover:scale-105 transition-all duration-500 ease-out border border-gray-600"
+      >
+        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+          <User className="w-5 h-5 text-white" />
+        </div>
+        <span>{username}</span>
+      </button>
+
+      {showDropdown && (
+        <div className="absolute right-0 mt-2 w-48 bg-gray-900 rounded-lg shadow-xl border border-gray-700 overflow-hidden">
           <button
-            onClick={() => navigate("/login")}
-            className="flex items-center gap-2 bg-gradient-to-r from-[#B88BFF] to-[#FFD3E0] text-white font-semibold px-5 py-2 rounded-lg shadow-lg transition-all hover:scale-105"
+            onClick={() => navigate('/portfolio')}
+            className="w-full text-left px-4 py-3 hover:bg-gray-800 transition-colors flex items-center gap-2"
           >
-            <LogIn className="w-5 h-5" />
-            Login / Signup
+            <User className="w-4 h-4 text-white" />
+            <span className="text-white">Portfolio</span>
           </button>
-        )}
-      </div>
+          <button
+            onClick={handleLogout}
+            className="w-full text-left px-4 py-3 hover:bg-gray-800 transition-colors flex items-center gap-2 text-red-400"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </button>
+        </div>
+      )}
+    </div>
+  ) : (
+    <button
+      onClick={() => navigate("/login")}
+      className="px-8 py-3 rounded-full text-lg font-semibold text-white 
+                 bg-gradient-to-r from-[#B88BFF] to-[#FFD3E0]
+                 shadow-lg hover:shadow-[0_0_25px_rgba(184,139,255,0.8)]
+                 transform hover:scale-105 transition-all duration-500 ease-out"
+    >
+      Login / Signup
+    </button>
+  )}
+</div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <StockTicker />
