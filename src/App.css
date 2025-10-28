@@ -40,3 +40,23 @@
 .read-the-docs {
   color: #888;
 }
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.text-lg md:text-xl mb-10 text-gray-300 max-w-2xl mx-auto{
+  font-family: Georgia, 'Times New Roman', Times, serif;
+  
+}
