@@ -11,6 +11,9 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.16",
+    "axios": "^1.13.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
     "framer-motion": "^12.23.24",
     "gsap": "^3.13.0",
     "lucide-react": "^0.546.0",
@@ -21,7 +24,8 @@
     "react-router-dom": "^7.9.4",
     "recharts": "^3.3.0",
     "tailwindcss": "^4.1.16",
-    "three": "^0.180.0"
+    "three": "^0.180.0",
+    "yahoo-finance2": "^3.10.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
