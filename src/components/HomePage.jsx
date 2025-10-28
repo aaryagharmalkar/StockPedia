@@ -2,11 +2,12 @@ import React, { useEffect, useState } from "react";
 import { StockCard } from "./StockCard";
 import { NewsCard } from "./NewsCard";
 import { HeroSection } from "./HeroSection";
-import { TrendingUp, TrendingDown, Activity, Newspaper, Sparkles, LogIn } from "lucide-react";
+import { TrendingUp, TrendingDown, Activity, Newspaper, Sparkles, LogIn, User, LogOut } from "lucide-react";
 import { motion } from "framer-motion";
 import { StockTicker } from "./StockTicker";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "./SupabaseClient";
 
 const scrollAnimation = {
   hidden: { opacity: 0, y: 30 },
@@ -25,7 +26,41 @@ export function HomePage() {
   const [trendingStocks, setTrendingStocks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [user, setUser] = useState(null);
+  const [username, setUsername] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
   const navigate = useNavigate();
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUser(user);
+        // Fetch username from profiles table
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', user.id)
+          .single();
+        
+        setUsername(profile?.username || user.email.split('@')[0]);
+      }
+    };
+    checkAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+      } else {
+        setUser(null);
+        setUsername('');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Fetch data from backend
   useEffect(() => {
@@ -78,6 +113,13 @@ export function HomePage() {
     return () => clearInterval(interval);
   }, []);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    localStorage.clear();
+    setShowDropdown(false);
+    navigate('/');
+  };
+
   const newsHighlights = [
     {
       title: "Markets closed higher today led by IT and Banking sectors",
@@ -101,15 +143,48 @@ export function HomePage() {
       {/* Hero Section */}
       <HeroSection />
 
-      {/* 🔐 Login Button (fixed top-right corner) */}
+      {/* 🔐 Login/User Profile Button (fixed top-right corner) */}
       <div className="fixed top-5 right-5 z-50">
-        <button
-          onClick={() => navigate("/login")}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-lg shadow-lg transition-all"
-        >
-          <LogIn className="w-5 h-5" />
-          Login / Signup
-        </button>
+        {user ? (
+          <div className="relative">
+            <button
+              onClick={() => setShowDropdown(!showDropdown)}
+              className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white font-semibold px-5 py-2 rounded-lg shadow-lg transition-all border border-gray-600"
+            >
+              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                <User className="w-5 h-5" />
+              </div>
+              <span>{username}</span>
+            </button>
+
+            {showDropdown && (
+              <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-xl border border-gray-700 overflow-hidden">
+                <button
+                  onClick={() => navigate('/portfolio')}
+                  className="w-full text-left px-4 py-3 hover:bg-gray-700 transition-colors flex items-center gap-2"
+                >
+                  <User className="w-4 h-4" />
+                  Portfolio
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-4 py-3 hover:bg-gray-700 transition-colors flex items-center gap-2 text-red-400"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={() => navigate("/login")}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-lg shadow-lg transition-all"
+          >
+            <LogIn className="w-5 h-5" />
+            Login / Signup
+          </button>
+        )}
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">

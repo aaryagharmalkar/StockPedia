@@ -34,7 +34,7 @@ const Portfolio = () => {
       // Fetch current prices for all stocks
       const symbols = portfolioStocks.map(stock => stock.symbol).join(',');
       if (symbols) {
-        const pricesRes = await axios.get(`http://localhost:5050/api/stocks/live?symbols=${symbols}`);
+        const pricesRes = await axios.get(`http://localhost:5050/api/live?symbols=${symbols}`);
         const currentPrices = pricesRes.data;
 
         // Merge current prices with portfolio data
