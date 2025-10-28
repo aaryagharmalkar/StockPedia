@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from './SupabaseClient';
-import { TrendingUp } from "lucide-react";
+import logo from '../assets/StockPedia logo.png'; // ✅ make sure this path & filename are correct
 
 const LoginSignup = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -13,7 +13,6 @@ const LoginSignup = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -115,27 +114,35 @@ const LoginSignup = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-800 flex items-center justify-center p-6">
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-8">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-2">
-  <div className="p-2 bg-green-900 bg-opacity-30 rounded-lg">
-    <TrendingUp className="w-6 h-6 text-green-400" />
-  </div>
-  <h1 className="text-4xl font-bold text-gray-100">StockPedia</h1>
-</div>
+    <div className="min-h-screen bg-gradient-to-br from-[#0a0012] via-[#15002a] to-[#1a0036] flex items-center justify-center p-6">
+      <div className="bg-[#120020]/70 backdrop-blur-md border border-white/40 rounded-2xl shadow-[0_0_25px_rgba(255,255,255,0.15)] 
+                      w-full max-w-md p-8 transition-all duration-500 ease-in-out 
+                      hover:shadow-[0_0_40px_rgba(184,139,255,0.5)] hover:scale-[1.02]">
 
-          <p className="text-gray-400 mt-2">
+        {/* Logo & Title */}
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-3 mb-3 group">
+            <img
+              src={logo}
+              alt="StockPedia Logo"
+              className="w-16 h-16 md:w-20 md:h-20 object-contain transition-transform duration-500 
+                         group-hover:scale-110 group-hover:rotate-6 drop-shadow-[0_0_20px_rgba(184,139,255,0.7)]"
+            />
+            <h1 className="text-5xl font-bold text-white tracking-wide transition-transform duration-500 
+                           group-hover:scale-110 drop-shadow-[0_0_10px_rgba(255,211,224,0.7)]">
+              StockPedia
+            </h1>
+          </div>
+          <p className="text-gray-300 mt-2 text-sm tracking-wide">
             {isLogin ? 'Login to your account' : 'Create your account'}
           </p>
         </div>
 
+        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Username
-              </label>
+            <div className="transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(184,139,255,0.4)] rounded-lg p-1">
+              <label className="block text-sm font-medium text-white mb-1">Username</label>
               <input
                 type="text"
                 name="username"
@@ -143,16 +150,13 @@ const LoginSignup = () => {
                 onChange={handleChange}
                 placeholder="Enter your username"
                 disabled={loading}
-                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 
-                           focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50"
+                className="w-full px-4 py-2 bg-[#1b0032] border border-white/40 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-white outline-none transition duration-300"
               />
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Email
-            </label>
+          <div className="transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(255,211,224,0.4)] rounded-lg p-1">
+            <label className="block text-sm font-medium text-white mb-1">Email</label>
             <input
               type="email"
               name="email"
@@ -160,15 +164,12 @@ const LoginSignup = () => {
               onChange={handleChange}
               placeholder="Enter your email"
               disabled={loading}
-              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 
-                         focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50"
+              className="w-full px-4 py-2 bg-[#1b0032] border border-white/40 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-white outline-none transition duration-300"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Password
-            </label>
+          <div className="transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(184,139,255,0.4)] rounded-lg p-1">
+            <label className="block text-sm font-medium text-white mb-1">Password</label>
             <input
               type="password"
               name="password"
@@ -176,16 +177,13 @@ const LoginSignup = () => {
               onChange={handleChange}
               placeholder="Enter your password"
               disabled={loading}
-              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 
-                         focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50"
+              className="w-full px-4 py-2 bg-[#1b0032] border border-white/40 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-white outline-none transition duration-300"
             />
           </div>
 
           {!isLogin && (
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Confirm Password
-              </label>
+            <div className="transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(255,211,224,0.4)] rounded-lg p-1">
+              <label className="block text-sm font-medium text-white mb-1">Confirm Password</label>
               <input
                 type="password"
                 name="confirmPassword"
@@ -193,34 +191,38 @@ const LoginSignup = () => {
                 onChange={handleChange}
                 placeholder="Confirm your password"
                 disabled={loading}
-                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 
-                           focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50"
+                className="w-full px-4 py-2 bg-[#1b0032] border border-white/40 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-white outline-none transition duration-300"
               />
             </div>
           )}
 
           {error && (
-            <div className="bg-red-900/20 border border-red-600 text-red-400 px-4 py-3 rounded-lg text-sm">
+            <div className="bg-red-900/40 border border-red-500 text-red-300 px-4 py-3 rounded-lg text-sm animate-pulse">
               {error}
             </div>
           )}
 
+          {/* Button */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 
-                       text-white font-semibold py-3 rounded-lg transition-all duration-300 shadow-md 
+            className="w-full py-3 rounded-lg text-white font-semibold text-lg 
+                       bg-gradient-to-r from-[#B88BFF] to-[#FFD3E0] 
+                       hover:from-[#FFD3E0] hover:to-[#B88BFF]
+                       transition-all duration-500 shadow-[0_0_20px_rgba(255,211,224,0.5)] 
+                       hover:shadow-[0_0_30px_rgba(184,139,255,0.6)] hover:scale-[1.03]
                        disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Processing...' : (isLogin ? 'Login' : 'Sign Up')}
           </button>
         </form>
 
+        {/* Switch Between Login/Signup */}
         <div className="text-center mt-6">
-          <p className="text-gray-400">
+          <p className="text-gray-300">
             {isLogin ? "Don't have an account? " : "Already have an account? "}
             <span
-              className="text-blue-400 font-semibold cursor-pointer hover:underline"
+              className="text-white font-semibold cursor-pointer hover:underline hover:text-[#FFD3E0] transition-all"
               onClick={toggleMode}
             >
               {isLogin ? 'Sign Up' : 'Login'}
@@ -229,8 +231,8 @@ const LoginSignup = () => {
         </div>
 
         {!isLogin && (
-          <div className="mt-6 bg-gradient-to-r from-emerald-800/20 to-green-700/20 border border-emerald-500/40 rounded-lg p-4 text-center">
-            <p className="text-emerald-400 font-medium">🎁 Get ₹10,000 virtual money on signup!</p>
+          <div className="mt-6 bg-white/5 border border-white/30 rounded-lg p-4 text-center transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+            <p className="text-white font-medium">🎁 Get ₹10,000 virtual money on signup!</p>
           </div>
         )}
       </div>

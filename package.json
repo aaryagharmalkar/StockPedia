@@ -24,6 +24,7 @@
     "react-parallax-tilt": "^1.7.310",
     "react-router-dom": "^7.9.4",
     "recharts": "^3.3.0",
+    "supabase": "^2.54.10",
     "tailwindcss": "^4.1.16",
     "three": "^0.180.0",
     "yahoo-finance2": "^3.10.0"
