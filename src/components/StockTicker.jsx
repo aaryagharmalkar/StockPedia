@@ -1,44 +1,99 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { TrendingUp, TrendingDown } from "lucide-react";
-
-const stocks = [
-  { symbol: "RELIANCE", price: 2715.0, change: 0.52 },
-  { symbol: "HDFCBANK", price: 1917.35, change: 0.76 },
-  { symbol: "TN", price: 1820.5, change: -1.5 },
-  { symbol: "TCS", price: 3840.0, change: 0.79 },
-  { symbol: "ITC", price: 492.05, change: 0.32 },
-];
+import axios from "axios";
 
 export const StockTicker = () => {
+  const [stocks, setStocks] = useState([]);
+
+  useEffect(() => {
+    const fetchStocks = async () => {
+      try {
+        const { data } = await axios.get("http://localhost:5050/api/live");
+        console.log("Ticker data:", data);
+
+        // ✅ Only include tradable stocks (exclude indices)
+        // Exclude NIFTY, SENSEX, BANKNIFTY (these are indices, not tradable stocks)
+const excluded = ["NIFTY", "SENSEX", "BANKNIFTY"];
+
+const onlyStocks = data.filter(
+  (item) =>
+    !excluded.some(
+      (ex) =>
+        item.symbol?.toUpperCase().includes(ex) ||
+        item.name?.toUpperCase().includes(ex)
+    )
+);
+
+
+        // ✅ Keep first 10 for smooth marquee
+        const mappedData = onlyStocks.slice(0, 10).map((s) => ({
+          symbol: s.symbol,
+          name: s.name,
+          price: s.price,
+          percentChange: s.percentChange,
+          currency: s.currency,
+        }));
+
+        setStocks(mappedData);
+      } catch (err) {
+        console.error("Error fetching ticker stocks:", err);
+      }
+    };
+
+    fetchStocks();
+    const interval = setInterval(fetchStocks, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (stocks.length === 0) return null;
+
   return (
-    <div className="bg-white border-b border-gray-200 overflow-hidden">
-      <div className="flex items-center gap-8 px-6 py-3 animate-marquee">
-        {stocks.map((stock) => (
-          <div key={stock.symbol} className="flex items-center gap-2 whitespace-nowrap">
-            <span className="font-semibold text-gray-800">{stock.symbol}</span>
-            <span className="text-gray-800">{stock.price.toFixed(2)}</span>
+    <div className="bg-gradient-to-r from-gray-900 via-gray-900 to-gray-800 border-b border-gray-700 overflow-hidden">
+      <div className="flex items-center gap-10 px-6 py-3 animate-marquee">
+        {[...stocks, ...stocks].map((stock, index) => (
+          <div
+            key={`${stock.symbol}-${index}`}
+            className="flex items-center gap-3 whitespace-nowrap text-gray-300 hover:text-white transition-colors duration-200"
+          >
+            {/* Symbol */}
+            <span className="font-semibold text-gray-100">{stock.symbol}</span>
+
+            {/* Price */}
+            <span className="text-gray-200">
+              {stock.currency === "INR" ? "₹" : "$"}
+              {stock.price?.toFixed(2)}
+            </span>
+
+            {/* Percent change */}
             <span
               className={`flex items-center gap-1 text-sm ${
-                stock.change >= 0 ? "text-green-500" : "text-red-500"
+                stock.percentChange >= 0 ? "text-green-400" : "text-red-400"
               }`}
             >
-              {stock.change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-              {stock.change >= 0 ? "+" : ""}
-              {stock.change}%
+              {stock.percentChange >= 0 ? (
+                <TrendingUp className="h-3 w-3" />
+              ) : (
+                <TrendingDown className="h-3 w-3" />
+              )}
+              {stock.percentChange >= 0 ? "+" : ""}
+              {stock.percentChange?.toFixed(2)}%
             </span>
           </div>
         ))}
       </div>
 
-      {/* Simple marquee animation */}
+      {/* Animation style */}
       <style>{`
         @keyframes marquee {
-          0% { transform: translateX(100%); }
-          100% { transform: translateX(-100%); }
+          0% { transform: translateX(0%); }
+          100% { transform: translateX(-50%); }
         }
         .animate-marquee {
           display: inline-flex;
-          animation: marquee 20s linear infinite;
+          animation: marquee 35s linear infinite;
+        }
+        .animate-marquee:hover {
+          animation-play-state: paused;
         }
       `}</style>
     </div>

@@ -2,11 +2,17 @@ import express from "express";
 import YahooFinance from "yahoo-finance2";
 
 const router = express.Router();
-
-// Create an instance of YahooFinance
 const yahooFinance = new YahooFinance();
 
-const symbols = [
+// ✅ Add Indian indices
+const indices = [
+  { symbol: "^NSEI", name: "NIFTY 50" },
+  { symbol: "^BSESN", name: "SENSEX" },
+  { symbol: "^NSEBANK", name: "BANK NIFTY" },
+];
+
+// ✅ Your existing stock list
+const stocks = [
   "RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "ICICIBANK.NS",
   "KOTAKBANK.NS", "SBIN.NS", "AXISBANK.NS", "BHARTIARTL.NS", "LT.NS",
   "ITC.NS", "HINDUNILVR.NS", "HCLTECH.NS", "SUNPHARMA.NS", "TATAMOTORS.NS",
@@ -21,31 +27,42 @@ const symbols = [
 
 router.get("/live", async (req, res) => {
   try {
+    // ✅ Combine indices + stocks
+    const allSymbols = [
+      ...indices.map((i) => ({ symbol: i.symbol, type: "index" })),
+      ...stocks.map((s) => ({ symbol: s, type: "stock" })),
+    ];
+
     const quotes = await Promise.all(
-      symbols.map(async (symbol) => {
+      allSymbols.map(async ({ symbol, type }) => {
         try {
-          // Use the instance to call methods
           const result = await yahooFinance.quote(symbol);
-          
+
+          // 🧠 Use custom name for indices
+          const customName =
+            indices.find((i) => i.symbol === symbol)?.name ||
+            result.shortName ||
+            result.longName ||
+            symbol;
+
           return {
-            symbol: symbol,
-            name: result.shortName || result.longName,
+            symbol,
+            name: customName,
             price: result.regularMarketPrice,
             change: result.regularMarketChange,
             percentChange: result.regularMarketChangePercent,
             currency: result.currency,
             time: result.regularMarketTime,
+            type, // 🔥 Helps frontend separate stocks vs indices
           };
         } catch (err) {
-          console.error(`Error fetching ${symbol}:`, err.message);
+          console.error(`❌ Error fetching ${symbol}:`, err.message);
           return null;
         }
       })
     );
 
-    // Filter out any null results from failed requests
-    const validQuotes = quotes.filter(q => q !== null);
-    
+    const validQuotes = quotes.filter(Boolean);
     res.json(validQuotes);
   } catch (err) {
     console.error("❌ Yahoo API error:", err);

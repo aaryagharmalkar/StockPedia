@@ -42,10 +42,15 @@ export const MarketWatch = ({ onStockSelect, selectedStock }) => {
   };
 
   // Filter for search
-  const filtered = stocks.filter((s) =>
+  const excludedSymbols = ["^NSEI", "^BSESN", "^NSEBANK"];
+
+const filtered = stocks
+  .filter((s) =>
     s.name?.toLowerCase().includes(search.toLowerCase()) ||
     s.symbol?.toLowerCase().includes(search.toLowerCase())
-  );
+  )
+  .filter((s) => !excludedSymbols.includes(s.symbol.toUpperCase()));
+
 
   // Current chart data
   const stockData = filtered.find((s) => s.symbol === chartStock) || filtered[0];

@@ -1,12 +1,12 @@
-// src/components/HomePage.jsx
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { StockCard } from "./StockCard";
 import { NewsCard } from "./NewsCard";
 import { HeroSection } from "./HeroSection";
 import { TrendingUp, TrendingDown, Activity, Newspaper, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
+import { StockTicker } from "./StockTicker";
+import axios from "axios";
 
-// Scroll animation variant
 const scrollAnimation = {
   hidden: { opacity: 0, y: 30 },
   visible: {
@@ -16,59 +16,99 @@ const scrollAnimation = {
   },
 };
 
-// Sample data
-const indices = [
-  { name: "NIFTY", value: 21430, change: 0.8 },
-  { name: "BANKNIFTY", value: 46120, change: -0.3 },
-  { name: "SENSEX", value: 72450, change: 0.5 },
-];
-
-const topGainers = [
-  { symbol: "RELIANCE", price: 2350, change: 2.1 },
-  { symbol: "TCS", price: 3300, change: 1.8 },
-  { symbol: "INFY", price: 1450, change: 1.5 },
-];
-
-const topLosers = [
-  { symbol: "SBIN", price: 530, change: -1.5 },
-  { symbol: "HDFC", price: 2800, change: -0.9 },
-  { symbol: "AXISBANK", price: 750, change: -1.2 },
-];
-
-const trendingStocks = [
-  { symbol: "RELIANCE", price: 2350, change: 2.1 },
-  { symbol: "TCS", price: 3300, change: 1.8 },
-  { symbol: "INFY", price: 1450, change: 1.5 },
-  { symbol: "HCLTECH", price: 1200, change: 0.9 },
-  { symbol: "BAJFINANCE", price: 7100, change: 1.1 },
-];
-
-const newsHighlights = [
-  {
-    title: "Markets closed higher today led by IT and Banking sectors",
-    source: "Economic Times",
-    date: "Oct 24, 2025",
-  },
-  {
-    title: "Reliance outperforms; analysts expect short-term bullish trend",
-    source: "Moneycontrol",
-    date: "Oct 24, 2025",
-  },
-  {
-    title: "TCS sees strong momentum after quarterly results",
-    source: "Business Standard",
-    date: "Oct 23, 2025",
-  },
-];
-
 export function HomePage() {
+  const [stocks, setStocks] = useState([]);
+  const [indices, setIndices] = useState([]);
+  const [topGainers, setTopGainers] = useState([]);
+  const [topLosers, setTopLosers] = useState([]);
+  const [trendingStocks, setTrendingStocks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch data from backend
+  useEffect(() => {
+    const fetchStocks = async () => {
+      try {
+        setLoading(true);
+        const { data } = await axios.get("http://localhost:5050/api/live");
+        console.log("Live stock data:", data);
+
+        // Separate indices (NIFTY, SENSEX, BANKNIFTY) if available
+        const indexData = data
+  .filter(
+    (item) =>
+      item.symbol?.includes("^NSEI") ||
+      item.symbol?.includes("^BSESN") ||
+      item.symbol?.includes("^NSEBANK")
+  )
+  .map((item) => {
+    let displayName = item.name;
+    if (item.symbol.includes("^NSEI")) displayName = "NIFTY 50";
+    if (item.symbol.includes("^BSESN")) displayName = "SENSEX";
+    if (item.symbol.includes("^NSEBANK")) displayName = "BANK NIFTY";
+    return { ...item, displayName };
+  });
+
+        setIndices(indexData);
+
+
+        if (!Array.isArray(data)) {
+          throw new Error("Invalid data format");
+        }
+
+        setStocks(data);
+
+        // Sort by percent change
+        const sorted = [...data].sort((a, b) => b.percentChange - a.percentChange);
+
+        setTopGainers(sorted.slice(0, 3)); // top 3 gainers
+        setTopLosers(sorted.slice(-3).reverse()); // bottom 3 losers
+        setTrendingStocks(sorted.slice(0, 5)); // top 5 trending
+
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching live stock data:", err);
+        setError("Failed to fetch live stock data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStocks();
+    const interval = setInterval(fetchStocks, 60000); // refresh every 1 min
+    return () => clearInterval(interval);
+  }, []);
+
+
+  const newsHighlights = [
+    {
+      title: "Markets closed higher today led by IT and Banking sectors",
+      source: "Economic Times",
+      date: "Oct 28, 2025",
+    },
+    {
+      title: "Reliance outperforms; analysts expect short-term bullish trend",
+      source: "Moneycontrol",
+      date: "Oct 28, 2025",
+    },
+    {
+      title: "TCS sees strong momentum after quarterly results",
+      source: "Business Standard",
+      date: "Oct 27, 2025",
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 text-white space-y-8">
-      
       {/* Hero Section */}
       <HeroSection />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <StockTicker />
+
+        {/* Error / Loading */}
+        {loading && <p className="text-gray-400 text-center">Loading live market data...</p>}
+        {error && <p className="text-red-400 text-center">{error}</p>}
 
         {/* Market Overview */}
         <motion.div
@@ -84,20 +124,26 @@ export function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {indices.map((idx) => (
               <motion.div
-                key={idx.name}
+                key={idx.symbol}
                 className="bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 border border-gray-700 hover:border-gray-600"
                 whileHover={{ scale: 1.05 }}
               >
-                <h3 className="text-sm font-medium text-gray-400 mb-2">{idx.name}</h3>
-                <span className="text-3xl font-bold block mb-2">{idx.value.toLocaleString()}</span>
+                <h3 className="text-sm font-medium text-gray-400 mb-2">{idx.displayName}</h3>
+                <span className="text-3xl font-bold block mb-2">
+                  {idx.price?.toLocaleString() || "--"}
+                </span>
                 <div className="flex items-center gap-2">
-                  {idx.change >= 0 ? (
+                  {idx.percentChange >= 0 ? (
                     <TrendingUp className="w-5 h-5 text-green-400" />
                   ) : (
                     <TrendingDown className="w-5 h-5 text-red-400" />
                   )}
-                  <span className={`text-lg font-semibold ${idx.change >= 0 ? "text-green-400" : "text-red-400"}`}>
-                    {idx.change >= 0 ? "+" : ""}{idx.change}%
+                  <span
+                    className={`text-lg font-semibold ${idx.percentChange >= 0 ? "text-green-400" : "text-red-400"
+                      }`}
+                  >
+                    {idx.percentChange >= 0 ? "+" : ""}
+                    {idx.percentChange?.toFixed(2)}%
                   </span>
                 </div>
               </motion.div>
@@ -162,15 +208,20 @@ export function HomePage() {
                 whileHover={{ scale: 1.05 }}
               >
                 <h4 className="font-bold text-lg mb-2">{stock.symbol}</h4>
-                <span className="text-2xl font-bold mb-2">₹{stock.price.toLocaleString()}</span>
+                <span className="text-2xl font-bold mb-2">
+                  ₹{stock.price?.toFixed(2) || "0.00"}
+                </span>
                 <div className="flex items-center gap-1">
-                  {stock.change >= 0 ? (
+                  {stock.percentChange >= 0 ? (
                     <TrendingUp className="w-4 h-4 text-green-400" />
                   ) : (
                     <TrendingDown className="w-4 h-4 text-red-400" />
                   )}
-                  <span className={`font-semibold ${stock.change >= 0 ? "text-green-400" : "text-red-400"}`}>
-                    {Math.abs(stock.change)}%
+                  <span
+                    className={`font-semibold ${stock.percentChange >= 0 ? "text-green-400" : "text-red-400"
+                      }`}
+                  >
+                    {stock.percentChange?.toFixed(2)}%
                   </span>
                 </div>
               </motion.div>
@@ -195,9 +246,8 @@ export function HomePage() {
               <h3 className="text-2xl font-bold">AI Market Summary</h3>
             </div>
             <p className="text-gray-300 text-lg leading-relaxed">
-              Markets closed higher today led by IT and Banking sectors. Reliance, TCS, and HDFC
-              outperformed, while SBI and AxisBank saw minor corrections. AI indicates short-term
-              bullish trend for TCS and Reliance.
+              Markets show strong momentum across multiple sectors. Top gainers include Reliance,
+              TCS, and Infosys. AI suggests a short-term bullish trend.
             </p>
           </div>
         </motion.div>
@@ -221,7 +271,6 @@ export function HomePage() {
             ))}
           </div>
         </motion.div>
-
       </div>
     </div>
   );
