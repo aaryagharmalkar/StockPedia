@@ -408,7 +408,7 @@ const PillNav = ({
             };
             const hoverIn = e => {
               e.currentTarget.style.background = 'var(--base)';
-              e.currentTarget.style.color = 'var(--hover-text, #fff)';
+              e.currentTarget.style.color = 'var(--hover-text, #f8c0edff)';
             };
             const hoverOut = e => {
               e.currentTarget.style.background = 'var(--pill-bg, #fff)';

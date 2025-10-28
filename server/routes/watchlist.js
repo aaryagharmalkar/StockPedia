@@ -1,88 +1,123 @@
-import express from 'express';
-import { supabase } from '../config/supabaseClient.js';
+// routes/watchlist.js
+import express from "express";
+import { createClient } from "@supabase/supabase-js";
 
 const router = express.Router();
 
-// GET - Fetch user's watchlist
-router.get('/:userId', async (req, res) => {
+// 🧠 Debug: Check if .env is loading
+console.log("SUPABASE_URL:", process.env.SUPABASE_URL);
+console.log("SUPABASE_SERVICE_KEY:", process.env.SUPABASE_SERVICE_KEY ? "Loaded ✅" : "❌ Missing");
+
+// ✅ Initialize Supabase client (backend service key)
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+);
+
+// ✅ GET /api/watchlist/:userId - Get user's watchlist
+router.get("/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
-
     const { data, error } = await supabase
-      .from('watchlist')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .from("watchlist")
+      .select("*")
+      .eq("user_id", userId)
+      .order("added_at", { ascending: false });
 
     if (error) throw error;
-
     res.json(data);
   } catch (error) {
-    console.error('Error fetching watchlist:', error);
+    console.error("Error fetching watchlist:", error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// POST - Add stock to watchlist
-router.post('/add', async (req, res) => {
+// ✅ POST /api/watchlist/add - Add stock to watchlist
+router.post("/add", async (req, res) => {
   try {
-    const { user_id, symbol } = req.body;
+    const { user_id, symbol, name } = req.body;
 
-    if (!user_id || !symbol) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
+    if (!user_id || !symbol)
+      return res.status(400).json({ error: "user_id and symbol are required" });
 
-    // Check if stock already exists in watchlist
-    const { data: existing, error: checkError } = await supabase
-      .from('watchlist')
-      .select('*')
-      .eq('user_id', user_id)
-      .eq('symbol', symbol.toUpperCase())
-      .single();
-
-    if (existing) {
-      return res.status(400).json({ error: 'Stock already in watchlist' });
-    }
-
-    // Add to watchlist
     const { data, error } = await supabase
-      .from('watchlist')
+      .from("watchlist")
       .insert({
         user_id,
-        symbol: symbol.toUpperCase()
+        symbol: symbol.toUpperCase(),
+        name: name || symbol.toUpperCase(),
+        added_at: new Date().toISOString(),
       })
-      .select()
-      .single();
+      .select();
+
+    if (error?.code === "23505")
+      return res.status(409).json({ error: "Stock already in watchlist" });
 
     if (error) throw error;
 
-    res.json({ success: true, message: `${symbol} added to watchlist`, data });
+    res.status(201).json({ message: "Stock added to watchlist", data });
   } catch (error) {
-    console.error('Error adding to watchlist:', error);
+    console.error("Error adding to watchlist:", error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// DELETE - Remove stock from watchlist
-router.delete('/remove', async (req, res) => {
+// ✅ DELETE /api/watchlist/remove - Remove stock from watchlist
+router.delete("/remove", async (req, res) => {
   try {
     const { user_id, symbol } = req.body;
 
-    if (!user_id || !symbol) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
+    if (!user_id || !symbol)
+      return res.status(400).json({ error: "user_id and symbol are required" });
 
     const { error } = await supabase
-      .from('watchlist')
+      .from("watchlist")
       .delete()
-      .eq('user_id', user_id)
-      .eq('symbol', symbol.toUpperCase());
+      .eq("user_id", user_id)
+      .eq("symbol", symbol.toUpperCase());
 
     if (error) throw error;
 
-    res.json({ success: true, message: `${symbol} removed from watchlist` });
+    res.json({ message: "Stock removed from watchlist" });
   } catch (error) {
-    console.error('Error removing from watchlist:', error);
+    console.error("Error removing from watchlist:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ✅ GET /api/watchlist/:userId/check/:symbol - Check if stock is in watchlist
+router.get("/:userId/check/:symbol", async (req, res) => {
+  try {
+    const { userId, symbol } = req.params;
+    const { data, error } = await supabase
+      .from("watchlist")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("symbol", symbol.toUpperCase())
+      .single();
+
+    if (error && error.code !== "PGRST116") throw error;
+    res.json({ inWatchlist: !!data });
+  } catch (error) {
+    console.error("Error checking watchlist:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ✅ GET /api/watchlist/:userId/symbols - Get only symbols
+router.get("/:userId/symbols", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { data, error } = await supabase
+      .from("watchlist")
+      .select("symbol")
+      .eq("user_id", userId);
+
+    if (error) throw error;
+    const symbols = data.map((item) => item.symbol);
+    res.json(symbols);
+  } catch (error) {
+    console.error("Error fetching symbols:", error);
     res.status(500).json({ error: error.message });
   }
 });

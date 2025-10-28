@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { StockChart } from "./StockChart";
 import axios from "axios";
+import { supabase } from "./supabaseClient";
+import { motion } from "framer-motion";
+import { Star, Loader2 } from "lucide-react";
+import logo from "../assets/logo.jpg"; // ✅ StockPedia logo
 
 export const MarketWatch = ({ onStockSelect, selectedStock }) => {
   const [stocks, setStocks] = useState([]);
@@ -8,22 +12,41 @@ export const MarketWatch = ({ onStockSelect, selectedStock }) => {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [watchlistSymbols, setWatchlistSymbols] = useState(new Set());
+  const [addingToWatchlist, setAddingToWatchlist] = useState(null);
 
-  // Fetch live stock data from backend
+  const userId = localStorage.getItem("user_id");
+
+  // Fetch user's watchlist symbols
+  useEffect(() => {
+    if (userId) fetchWatchlistSymbols();
+  }, [userId]);
+
+  const fetchWatchlistSymbols = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("watchlist")
+        .select("stock_symbol")
+        .eq("user_id", userId);
+
+      if (error) throw error;
+      const symbols = new Set(data.map((item) => item.stock_symbol));
+      setWatchlistSymbols(symbols);
+    } catch (err) {
+      console.error("Error fetching watchlist:", err);
+    }
+  };
+
+  // Fetch live stock data
   useEffect(() => {
     const fetchStocks = async () => {
       try {
-        console.log("Fetching stocks..."); // Debug log
         const { data } = await axios.get("http://localhost:5050/api/live");
-        console.log("Received data:", data); // Debug log - check what you're getting
-        console.log("First stock:", data[0]); // Debug log - check structure
-        
         setStocks(data);
         if (!chartStock && data.length > 0) {
           setChartStock(selectedStock || data[0]?.symbol);
         }
         setLoading(false);
-        setError(null);
       } catch (err) {
         console.error("Error fetching stocks:", err);
         setError(err.message);
@@ -31,122 +54,228 @@ export const MarketWatch = ({ onStockSelect, selectedStock }) => {
       }
     };
     fetchStocks();
-    const interval = setInterval(fetchStocks, 60000); // refresh every 1 min
+    const interval = setInterval(fetchStocks, 60000);
     return () => clearInterval(interval);
   }, [selectedStock, chartStock]);
 
-  // Handle user selection
   const handleSelect = (symbol) => {
     setChartStock(symbol);
     onStockSelect?.(symbol);
   };
 
-  // Filter for search
+  // Add/remove stock in watchlist
+  const handleAddToWatchlist = async (stock, e) => {
+    e.stopPropagation();
+    if (!userId) {
+      alert("Please login to manage your watchlist.");
+      return;
+    }
+
+    setAddingToWatchlist(stock.symbol);
+    try {
+      if (watchlistSymbols.has(stock.symbol)) {
+        await supabase
+          .from("watchlist")
+          .delete()
+          .eq("user_id", userId)
+          .eq("stock_symbol", stock.symbol);
+        setWatchlistSymbols((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(stock.symbol);
+          return newSet;
+        });
+        showToast(`${stock.symbol} removed from watchlist`, "success");
+      } else {
+        await supabase.from("watchlist").insert({
+          user_id: userId,
+          stock_symbol: stock.symbol,
+        });
+        setWatchlistSymbols((prev) => new Set([...prev, stock.symbol]));
+        showToast(`${stock.symbol} added to watchlist`, "success");
+      }
+    } catch (err) {
+      showToast("Failed to update watchlist", "error");
+    } finally {
+      setAddingToWatchlist(null);
+    }
+  };
+
+  const showToast = (message, type) => {
+    const toast = document.createElement("div");
+    toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+      type === "success" ? "bg-green-500" : "bg-red-500"
+    } text-white font-medium`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  };
+
+  // Search filter
   const excludedSymbols = ["^NSEI", "^BSESN", "^NSEBANK"];
+  const filtered = stocks
+    .filter(
+      (s) =>
+        s.name?.toLowerCase().includes(search.toLowerCase()) ||
+        s.symbol?.toLowerCase().includes(search.toLowerCase())
+    )
+    .filter((s) => !excludedSymbols.includes(s.symbol.toUpperCase()));
 
-const filtered = stocks
-  .filter((s) =>
-    s.name?.toLowerCase().includes(search.toLowerCase()) ||
-    s.symbol?.toLowerCase().includes(search.toLowerCase())
-  )
-  .filter((s) => !excludedSymbols.includes(s.symbol.toUpperCase()));
-
-
-  // Current chart data
   const stockData = filtered.find((s) => s.symbol === chartStock) || filtered[0];
 
-  console.log("Stocks array length:", stocks.length); // Debug log
-  console.log("Filtered array length:", filtered.length); // Debug log
-  console.log("Search term:", search); // Debug log
-
   return (
-    <div className="p-6 bg-white rounded-lg shadow-md space-y-6">
-      {/* Market Watch Header */}
-      <h3 className="text-lg font-semibold text-gray-800">Market Watch</h3>
+    <div className="min-h-screen bg-gradient-to-b from-[#0f1626] to-[#1a1a2e] text-white p-8">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex justify-between items-center mb-10"
+      >
+        <div className="flex items-center gap-3">
+          <img src={logo} alt="StockPedia" className="w-10 h-10 rounded-full border border-white" />
+          <h1 className="text-3xl font-bold tracking-wide">Market Watch</h1>
+        </div>
+        <div className="text-sm text-gray-400">{watchlistSymbols.size} in watchlist</div>
+      </motion.div>
 
-      {/* Search Input */}
-      <div className="mb-4">
+      {/* Search Bar */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="mb-6 max-w-md mx-auto"
+      >
         <input
           type="text"
-          placeholder="Search stocks..."
+          placeholder="🔍 Search stocks..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-3 p-2 w-full border rounded bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="w-full p-4 bg-[#1b2238] text-white placeholder-gray-400 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#B88BFF]"
         />
-      </div>
+      </motion.div>
 
-      {/* Error Message */}
-      {error && (
-        <div className="text-red-500 text-center p-3 bg-red-50 rounded">
-          Error: {error}
+      {/* Error or Loading */}
+      {loading ? (
+        <div className="flex justify-center items-center text-gray-300 py-20">
+          <Loader2 className="animate-spin w-8 h-8 text-[#B88BFF]" />
+          <span className="ml-3">Loading live stocks...</span>
         </div>
-      )}
-
-      {/* Debug Info */}
-      <div className="text-xs text-gray-500 text-center">
-        Total stocks: {stocks.length} | Filtered: {filtered.length}
-      </div>
-
-      {/* Scrollable Stock List */}
-      <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
-        {loading ? (
-          <p className="text-gray-500 text-center">Loading stocks...</p>
-        ) : error ? (
-          <p className="text-red-500 text-center">Failed to load stocks</p>
-        ) : filtered.length > 0 ? (
-          filtered.map((stock) => (
-            <div
-              key={stock.symbol}
-              onClick={() => handleSelect(stock.symbol)}
-              className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-                chartStock === stock.symbol
-                  ? "bg-blue-100 border border-blue-200"
-                  : "hover:bg-gray-100"
-              }`}
-            >
-              <div>
-                <div className="font-semibold text-gray-800">{stock.symbol}</div>
-                <div className="text-sm text-gray-500">
-                  {stock.name || "N/A"}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="font-semibold text-gray-800">
-                  {stock.currency === "INR" ? "₹" : "$"}{stock.price?.toFixed(2) || "0.00"}
-                </div>
-                <div
-                  className={`text-sm ${
-                    (stock.percentChange || 0) >= 0 ? "text-green-500" : "text-red-500"
-                  }`}
-                >
-                  {(stock.percentChange || 0) >= 0 ? "+" : ""}
-                  {stock.percentChange?.toFixed(2) || "0.00"}%
-                </div>
-              </div>
+      ) : error ? (
+        <div className="text-center text-red-400 py-10">Failed to load: {error}</div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Stock List */}
+          <motion.div
+            initial={{ x: -30, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            className="lg:col-span-1 bg-[#141a2e] border border-white/10 rounded-xl p-6 shadow-lg"
+          >
+            <h2 className="text-xl font-bold mb-4">Live Stocks</h2>
+            <div className="max-h-[70vh] overflow-y-auto space-y-4 pr-2">
+              {filtered.length > 0 ? (
+                filtered.map((stock) => {
+                  const isInWatchlist = watchlistSymbols.has(stock.symbol);
+                  const isAdding = addingToWatchlist === stock.symbol;
+                  const isSelected = chartStock === stock.symbol;
+                  return (
+                    <motion.div
+                      key={stock.symbol}
+                      whileHover={{ scale: 1.02, boxShadow: "0 0 15px rgba(184,139,255,0.4)" }}
+                      onClick={() => handleSelect(stock.symbol)}
+                      className={`flex justify-between items-center p-4 rounded-lg cursor-pointer transition-all ${
+                        isSelected
+                          ? "bg-gradient-to-r from-[#B88BFF]/30 to-[#FFD3E0]/30 border border-[#FFD3E0]"
+                          : "bg-[#1a1f35] border border-white/10 hover:border-[#B88BFF]/60"
+                      }`}
+                    >
+                      <div>
+                        <h3 className="text-lg font-bold">{stock.symbol}</h3>
+                        <p className="text-gray-400 text-sm">{stock.name || "N/A"}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <div className="text-lg font-semibold">
+                            {stock.currency === "INR" ? "₹" : "$"}
+                            {stock.price?.toFixed(2)}
+                          </div>
+                          <div
+                            className={`text-sm ${
+                              stock.percentChange >= 0 ? "text-green-400" : "text-red-400"
+                            }`}
+                          >
+                            {stock.percentChange >= 0 ? "+" : ""}
+                            {stock.percentChange?.toFixed(2)}%
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => handleAddToWatchlist(stock, e)}
+                          disabled={isAdding}
+                          className={`p-2 rounded-full transition-all ${
+                            isInWatchlist
+                              ? "bg-gradient-to-r from-[#B88BFF] to-[#FFD3E0] text-black"
+                              : "bg-gray-700 hover:bg-[#B88BFF]/30 text-white"
+                          } ${isAdding ? "opacity-50 cursor-not-allowed" : ""}`}
+                          title={isInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
+                        >
+                          {isAdding ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <Star
+                              className={`w-5 h-5 ${
+                                isInWatchlist ? "fill-current text-black" : "text-[#FFD3E0]"
+                              }`}
+                            />
+                          )}
+                        </button>
+                      </div>
+                    </motion.div>
+                  );
+                })
+              ) : (
+                <p className="text-gray-400 text-center">No stocks match your search</p>
+              )}
             </div>
-          ))
-        ) : stocks.length > 0 ? (
-          <p className="text-gray-500 text-center">No stocks match your search</p>
-        ) : (
-          <p className="text-gray-500 text-center">No stocks available</p>
-        )}
-      </div>
+          </motion.div>
 
-      {/* Add Button */}
-      <button className="w-full mt-4 p-2 border rounded flex items-center justify-center hover:bg-gray-100 transition-colors">
-        <span className="mr-2">➕</span>
-        Add to Watchlist
-      </button>
-
-      {/* Inline Stock Chart */}
-      {stockData && (
-        <div className="mt-6">
-          <StockChart
-            symbol={stockData.symbol}
-            currentPrice={stockData.price}
-            change={stockData.percentChange}
-            predictedPrice={Math.round((stockData.price || 0) * 1.02)} // Example prediction
-          />
+          {/* Chart Section */}
+          <motion.div
+            initial={{ x: 30, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            className="lg:col-span-2 bg-[#141a2e] border border-white/10 rounded-xl p-6 shadow-lg"
+          >
+            {stockData ? (
+              <>
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold">{stockData.symbol}</h2>
+                    <p className="text-gray-400">{stockData.name}</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold">
+                      {stockData.currency === "INR" ? "₹" : "$"}
+                      {stockData.price?.toFixed(2)}
+                    </div>
+                    <span
+                      className={`text-xl font-semibold ${
+                        stockData.percentChange >= 0 ? "text-green-400" : "text-red-400"
+                      }`}
+                    >
+                      {stockData.percentChange >= 0 ? "+" : ""}
+                      {stockData.percentChange?.toFixed(2)}%
+                    </span>
+                  </div>
+                </div>
+                <StockChart
+                  symbol={stockData.symbol}
+                  currentPrice={stockData.price}
+                  change={stockData.percentChange}
+                  predictedPrice={Math.round((stockData.price || 0) * 1.02)}
+                />
+              </>
+            ) : (
+              <div className="text-center text-gray-400 py-20">
+                Select a stock to view details
+              </div>
+            )}
+          </motion.div>
         </div>
       )}
     </div>

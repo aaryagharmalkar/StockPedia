@@ -8,9 +8,9 @@ import logo from "./assets/logo.jpg";
 import { HomePage } from "./components/HomePage";
 import { MarketWatch } from "./components/MarketWatch";
 import Portfolio from "./components/Portfolio";
-import { Wallet } from "./components/Wallet";
 import { StockChart } from "./components/StockChart";
 import LoginSignup from "./components/LoginSignup";
+import Watchlist from "./components/Watchlist"; // ✅ Proper default import
 
 function App() {
   const [selectedStock, setSelectedStock] = useState(null);
@@ -28,10 +28,8 @@ function App() {
 
   return (
     <Router>
-      {/* Full-page dark gradient background */}
       <div className="min-h-screen w-screen bg-gradient-to-b from-[#0f1626] to-[#1a1a2e] relative overflow-x-hidden">
-
-        {/* Navbar fixed at top-left */}
+        {/* Navigation Bar */}
         <div className="fixed top-4 left-4 z-[999]">
           <PillNav
             logo={logo}
@@ -40,7 +38,7 @@ function App() {
               { label: "Home", href: "/" },
               { label: "Market Watch", href: "/market-watch" },
               { label: "Portfolio", href: "/portfolio" },
-              { label: "Wallet", href: "/wallet" },
+              { label: "Watchlist", href: "/watchlist" },
             ]}
             activeHref={window.location.pathname}
             className="bg-transparent"
@@ -52,11 +50,10 @@ function App() {
           />
         </div>
 
-        {/* Main content */}
+        {/* Page Content */}
         <div className="pt-[5rem] w-full">
           <Routes>
             <Route path="/" element={<HomePage />} />
-
             <Route
               path="/market-watch"
               element={
@@ -66,30 +63,18 @@ function App() {
                 />
               }
             />
-
             <Route path="/portfolio" element={<Portfolio />} />
-            <Route path="/wallet" element={<Wallet />} />
-
+            <Route path="/watchlist" element={<Watchlist />} />
+            <Route path="/login" element={<LoginSignup />} />
             <Route
               path="/stock-chart"
-              element={
-                <StockChart
-                  symbol={stockData.symbol}
-                  currentPrice={stockData.currentPrice}
-                  change={stockData.change}
-                  predictedPrice={stockData.predictedPrice}
-                />
-              }
+              element={<StockChart {...stockData} />}
             />
-
-            {/* 👇 Added Login Route */}
-            <Route path="/login" element={<LoginSignup />} />
-
             <Route
               path="*"
               element={
-                <div className="text-center text-white mt-20">
-                  Page not found
+                <div className="text-center text-white mt-20 text-xl">
+                  Page Not Found
                 </div>
               }
             />
