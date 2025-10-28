@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import { StockCard } from "./StockCard";
 import { NewsCard } from "./NewsCard";
 import { HeroSection } from "./HeroSection";
-import { TrendingUp, TrendingDown, Activity, Newspaper, Sparkles } from "lucide-react";
+import { TrendingUp, TrendingDown, Activity, Newspaper, Sparkles, LogIn } from "lucide-react";
 import { motion } from "framer-motion";
 import { StockTicker } from "./StockTicker";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const scrollAnimation = {
   hidden: { opacity: 0, y: 30 },
@@ -24,6 +25,7 @@ export function HomePage() {
   const [trendingStocks, setTrendingStocks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   // Fetch data from backend
   useEffect(() => {
@@ -33,24 +35,23 @@ export function HomePage() {
         const { data } = await axios.get("http://localhost:5050/api/live");
         console.log("Live stock data:", data);
 
-        // Separate indices (NIFTY, SENSEX, BANKNIFTY) if available
+        // Separate indices (NIFTY, SENSEX, BANKNIFTY)
         const indexData = data
-  .filter(
-    (item) =>
-      item.symbol?.includes("^NSEI") ||
-      item.symbol?.includes("^BSESN") ||
-      item.symbol?.includes("^NSEBANK")
-  )
-  .map((item) => {
-    let displayName = item.name;
-    if (item.symbol.includes("^NSEI")) displayName = "NIFTY 50";
-    if (item.symbol.includes("^BSESN")) displayName = "SENSEX";
-    if (item.symbol.includes("^NSEBANK")) displayName = "BANK NIFTY";
-    return { ...item, displayName };
-  });
+          .filter(
+            (item) =>
+              item.symbol?.includes("^NSEI") ||
+              item.symbol?.includes("^BSESN") ||
+              item.symbol?.includes("^NSEBANK")
+          )
+          .map((item) => {
+            let displayName = item.name;
+            if (item.symbol.includes("^NSEI")) displayName = "NIFTY 50";
+            if (item.symbol.includes("^BSESN")) displayName = "SENSEX";
+            if (item.symbol.includes("^NSEBANK")) displayName = "BANK NIFTY";
+            return { ...item, displayName };
+          });
 
         setIndices(indexData);
-
 
         if (!Array.isArray(data)) {
           throw new Error("Invalid data format");
@@ -60,11 +61,9 @@ export function HomePage() {
 
         // Sort by percent change
         const sorted = [...data].sort((a, b) => b.percentChange - a.percentChange);
-
-        setTopGainers(sorted.slice(0, 3)); // top 3 gainers
-        setTopLosers(sorted.slice(-3).reverse()); // bottom 3 losers
-        setTrendingStocks(sorted.slice(0, 5)); // top 5 trending
-
+        setTopGainers(sorted.slice(0, 3));
+        setTopLosers(sorted.slice(-3).reverse());
+        setTrendingStocks(sorted.slice(0, 5));
         setError(null);
       } catch (err) {
         console.error("Error fetching live stock data:", err);
@@ -75,10 +74,9 @@ export function HomePage() {
     };
 
     fetchStocks();
-    const interval = setInterval(fetchStocks, 60000); // refresh every 1 min
+    const interval = setInterval(fetchStocks, 60000);
     return () => clearInterval(interval);
   }, []);
-
 
   const newsHighlights = [
     {
@@ -103,6 +101,17 @@ export function HomePage() {
       {/* Hero Section */}
       <HeroSection />
 
+      {/* 🔐 Login Button (fixed top-right corner) */}
+      <div className="fixed top-5 right-5 z-50">
+        <button
+          onClick={() => navigate("/login")}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-lg shadow-lg transition-all"
+        >
+          <LogIn className="w-5 h-5" />
+          Login / Signup
+        </button>
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <StockTicker />
 
@@ -111,12 +120,7 @@ export function HomePage() {
         {error && <p className="text-red-400 text-center">{error}</p>}
 
         {/* Market Overview */}
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={scrollAnimation}
-        >
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={scrollAnimation}>
           <div className="flex items-center gap-2 mb-4">
             <Activity className="w-6 h-6 text-blue-400" />
             <h2 className="text-2xl font-bold">Market Overview</h2>
@@ -139,8 +143,9 @@ export function HomePage() {
                     <TrendingDown className="w-5 h-5 text-red-400" />
                   )}
                   <span
-                    className={`text-lg font-semibold ${idx.percentChange >= 0 ? "text-green-400" : "text-red-400"
-                      }`}
+                    className={`text-lg font-semibold ${
+                      idx.percentChange >= 0 ? "text-green-400" : "text-red-400"
+                    }`}
                   >
                     {idx.percentChange >= 0 ? "+" : ""}
                     {idx.percentChange?.toFixed(2)}%
@@ -218,8 +223,9 @@ export function HomePage() {
                     <TrendingDown className="w-4 h-4 text-red-400" />
                   )}
                   <span
-                    className={`font-semibold ${stock.percentChange >= 0 ? "text-green-400" : "text-red-400"
-                      }`}
+                    className={`font-semibold ${
+                      stock.percentChange >= 0 ? "text-green-400" : "text-red-400"
+                    }`}
                   >
                     {stock.percentChange?.toFixed(2)}%
                   </span>

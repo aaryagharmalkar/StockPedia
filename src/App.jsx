@@ -7,9 +7,10 @@ import logo from "./assets/logo.jpg";
 
 import { HomePage } from "./components/HomePage";
 import { MarketWatch } from "./components/MarketWatch";
-import { Portfolio } from "./components/Portfolio";
+import Portfolio from "./components/Portfolio";
 import { Wallet } from "./components/Wallet";
 import { StockChart } from "./components/StockChart";
+import LoginSignup from "./components/LoginSignup";
 
 function App() {
   const [selectedStock, setSelectedStock] = useState(null);
@@ -55,6 +56,7 @@ function App() {
         <div className="pt-[5rem] w-full">
           <Routes>
             <Route path="/" element={<HomePage />} />
+
             <Route
               path="/market-watch"
               element={
@@ -64,8 +66,10 @@ function App() {
                 />
               }
             />
+
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/wallet" element={<Wallet />} />
+
             <Route
               path="/stock-chart"
               element={
@@ -77,6 +81,10 @@ function App() {
                 />
               }
             />
+
+            {/* 👇 Added Login Route */}
+            <Route path="/login" element={<LoginSignup />} />
+
             <Route
               path="*"
               element={

@@ -1,21 +1,20 @@
 import express from "express";
 import cors from "cors";
 import liveStocksRoute from "./routes/LiveStocks.js";
+import authRoutes from "./routes/auth.js";
+import portfolioRoutes from "./routes/portfolio.js";
+import watchlistRoutes from "./routes/watchlist.js";
 
 const app = express();
-const PORT = 5050;
-
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Default route (just to test server)
-app.get("/", (req, res) => {
-  res.send("✅ Server is running");
-});
+app.get("/", (req, res) => res.send("✅ StockPedia Server running"));
 
-// Use the /api route for live stocks
+// Routes
 app.use("/api", liveStocksRoute);
+app.use("/api/auth", authRoutes);
+app.use("/api/portfolio", portfolioRoutes);
+app.use("/api/watchlist", watchlistRoutes);
 
-// Start the server
-app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+app.listen(5050, () => console.log("🚀 Server running on http://localhost:5050"));
