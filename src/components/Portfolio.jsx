@@ -1,248 +1,202 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import './Portfolio.css';
+'use client';
+import { useEffect, useState } from 'react';
+import { supabase } from './SupabaseClient';
+import { LogOut, TrendingUp, Plus } from 'lucide-react';
+import axios from "axios";
+import CountUp from './CountUp';
+import { useNavigate } from 'react-router-dom';
 
-const Portfolio = () => {
+export default function PortfolioPage() {
+  const navigate = useNavigate();
   const [portfolio, setPortfolio] = useState([]);
-  const [walletBalance, setWalletBalance] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [sellModal, setSellModal] = useState({ show: false, stock: null });
-  const [sellQuantity, setSellQuantity] = useState('');
-  const [error, setError] = useState('');
+  const [user, setUser] = useState(null);
+  const [livePrices, setLivePrices] = useState({});
+  const [balance, setBalance] = useState(0);
 
-  // Get user_id from localStorage (set during login)
-  const userId = localStorage.getItem('user_id');
+
 
   useEffect(() => {
-    if (userId) {
-      fetchPortfolioData();
+    fetchUser();
+  }, []);
+
+  // ✅ Fetch logged-in user
+  const fetchUser = async () => {
+    const { data } = await supabase.auth.getUser();
+    if (data?.user) {
+      setUser(data.user);
+      fetchPortfolio(data.user.id);
+      fetchWalletBalance(data.user.id);
     } else {
-      setError('Please login to view portfolio');
       setLoading(false);
     }
-  }, [userId]);
+  };
 
-  // Fetch portfolio and wallet balance
-  const fetchPortfolioData = async () => {
-    try {
-      setLoading(true);
-      
-      // Fetch portfolio stocks
-      const portfolioRes = await axios.get(`http://localhost:5050/api/portfolio/${userId}`);
-      const portfolioStocks = portfolioRes.data.portfolio;
+  // ✅ Fetch portfolio items directly from Supabase
+  const fetchPortfolio = async (userId) => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('portfolio')
+      .select('*')
+      .eq('user_id', userId) // this assumes you added user_id to your table
+      .order('purchase_date', { ascending: false });
 
-      // Fetch current prices for all stocks
-      const symbols = portfolioStocks.map(stock => stock.symbol).join(',');
-      if (symbols) {
-        const pricesRes = await axios.get(`http://localhost:5050/api/live?symbols=${symbols}`);
-        const currentPrices = pricesRes.data;
+    if (error) console.error('Error fetching portfolio:', error);
+    else setPortfolio(data);
 
-        // Merge current prices with portfolio data
-        const enrichedPortfolio = portfolioStocks.map(stock => {
-          const currentStock = currentPrices.find(s => s.symbol === stock.symbol);
-          const currentPrice = currentStock ? currentStock.price : stock.avg_price;
-          const totalInvested = stock.avg_price * stock.quantity;
-          const currentValue = currentPrice * stock.quantity;
-          const profitLoss = currentValue - totalInvested;
-          const profitLossPercent = ((profitLoss / totalInvested) * 100).toFixed(2);
+    setLoading(false);
+  };
 
-          return {
-            ...stock,
-            currentPrice,
-            totalInvested,
-            currentValue,
-            profitLoss,
-            profitLossPercent
-          };
-        });
+  useEffect(() => {
+    async function fetchBalance() {
+      console.log("🧾 Fetching wallet balance for:", user.id);
 
-        setPortfolio(enrichedPortfolio);
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("balance")
+        .eq("id", user.id)
+        .single();
+
+      console.log("📦 Supabase returned:", data, "Error:", error);
+
+      if (error) {
+        console.error("Error fetching balance:", error.message);
+      } else if (data) {
+        // ✅ Ensure it's numeric
+        setBalance(Number(data.balance));
       }
-
-      // Fetch wallet balance
-      setWalletBalance(portfolioRes.data.wallet_balance);
-      setLoading(false);
-    } catch (err) {
-      console.error('Error fetching portfolio:', err);
-      setError('Failed to load portfolio data');
-      setLoading(false);
-    }
-  };
-
-  // Open sell modal
-  const openSellModal = (stock) => {
-    setSellModal({ show: true, stock });
-    setSellQuantity('');
-  };
-
-  // Handle sell stock
-  const handleSell = async () => {
-    if (!sellQuantity || sellQuantity <= 0) {
-      alert('Please enter valid quantity');
-      return;
     }
 
-    if (sellQuantity > sellModal.stock.quantity) {
-      alert('Cannot sell more than you own');
-      return;
+    if (user?.id) {
+      fetchBalance();
     }
+  }, [user]);
 
+
+  useEffect(() => {
+  const fetchLivePrices = async () => {
     try {
-      const sellData = {
-        user_id: userId,
-        symbol: sellModal.stock.symbol,
-        quantity: parseInt(sellQuantity),
-        price: sellModal.stock.currentPrice
-      };
-
-      await axios.post('http://localhost:5050/api/portfolio/sell', sellData);
-      
-      alert(`✅ Sold ${sellQuantity} shares of ${sellModal.stock.symbol}`);
-      setSellModal({ show: false, stock: null });
-      fetchPortfolioData(); // Refresh data
+      const { data } = await axios.get("http://localhost:5050/api/live");
+      // Convert array of live stocks into an object: { SYMBOL: price }
+      const pricesMap = {};
+      data.forEach(stock => {
+        pricesMap[stock.symbol.toUpperCase()] = parseFloat(stock.price);
+      });
+      setLivePrices(pricesMap);
     } catch (err) {
-      console.error('Error selling stock:', err);
-      alert('Failed to sell stock: ' + (err.response?.data?.error || err.message));
+      console.error("Error fetching live prices:", err);
     }
   };
 
-  // Calculate total portfolio value
-  const totalPortfolioValue = portfolio.reduce((sum, stock) => sum + stock.currentValue, 0);
-  const totalInvested = portfolio.reduce((sum, stock) => sum + stock.totalInvested, 0);
-  const totalProfitLoss = totalPortfolioValue - totalInvested;
-  const totalProfitLossPercent = totalInvested > 0 ? ((totalProfitLoss / totalInvested) * 100).toFixed(2) : 0;
+  fetchLivePrices(); // initial call
+  const interval = setInterval(fetchLivePrices, 60000); // refresh every 1 minute
+  return () => clearInterval(interval);
+}, []);
 
-  if (loading) {
-    return <div className="portfolio-container"><div className="loading">Loading portfolio...</div></div>;
-  }
 
-  if (error) {
-    return <div className="portfolio-container"><div className="error">{error}</div></div>;
-  }
+  // ✅ Logout user
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.reload();
+  };
+
+   // ✅ Handle stock click → navigate to MarketWatch
+  const handleStockClick = (symbol) => {
+    navigate("/market-watch", { state: { selectedStock: symbol } });
+  };
 
   return (
-    <div className="portfolio-container">
-      <h1>📊 My Portfolio</h1>
+    <div className="min-h-screen bg-gradient-to-br from-[#0A0A0F] to-[#1A1A2E] text-white p-8">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold tracking-wide">📈 My Portfolio</h1>
+        {user && (
+  <div className="flex items-center gap-3 mt-2 bg-gradient-to-r from-[#B88BFF]/10 to-[#FFD3E0]/10 px-6 py-3 rounded-2xl border border-[#B88BFF]/30 shadow-[0_0_15px_rgba(184,139,255,0.3)]">
+    <div className="p-3 bg-gradient-to-br from-[#B88BFF]/20 to-[#FFD3E0]/20 rounded-full">
+      💰
+    </div>
+    <div>
+      <p className="text-sm text-gray-400 tracking-wide">Wallet Balance</p>
+      <h2 className="text-2xl font-bold text-white flex items-baseline gap-1">
+        ₹
+        <CountUp
+          from={0}
+          to={Number(balance) || 0}
+          separator=","
+          direction="up"
+          duration={0.5}
+          className="text-[#FFD3E0] font-semibold"
+        />
+      </h2>
+    </div>
+  </div>
+)}
 
-      {/* Wallet & Summary Section */}
-      <div className="portfolio-summary">
-        <div className="summary-card wallet">
-          <h3>💰 Wallet Balance</h3>
-          <p className="amount">₹{walletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
-        </div>
-        
-        <div className="summary-card invested">
-          <h3>📈 Total Invested</h3>
-          <p className="amount">₹{totalInvested.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
-        </div>
-        
-        <div className="summary-card current">
-          <h3>💼 Current Value</h3>
-          <p className="amount">₹{totalPortfolioValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
-        </div>
-        
-        <div className={`summary-card profit-loss ${totalProfitLoss >= 0 ? 'positive' : 'negative'}`}>
-          <h3>📊 Total P&L</h3>
-          <p className="amount">
-            {totalProfitLoss >= 0 ? '+' : ''}₹{totalProfitLoss.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-          </p>
-          <p className="percent">({totalProfitLossPercent}%)</p>
-        </div>
-      </div>
 
-      {/* Holdings Table */}
-      <div className="holdings-section">
-        <h2>🏦 Your Holdings</h2>
-        {portfolio.length === 0 ? (
-          <div className="empty-portfolio">
-            <p>📭 No stocks in portfolio yet. Start investing!</p>
-          </div>
+
+        {/* Gradient Login/Logout button */}
+        {user ? (
+          <button
+            onClick={handleLogout}
+            className="px-8 py-3 rounded-full text-lg font-semibold text-white bg-gradient-to-r from-[#B88BFF] to-[#FFD3E0] 
+              shadow-lg hover:shadow-[0_0_25px_rgba(184,139,255,0.8)] 
+              transform hover:scale-105 transition-all duration-500 ease-out"
+          >
+            Logout
+          </button>
         ) : (
-          <div className="holdings-table-wrapper">
-            <table className="holdings-table">
-              <thead>
-                <tr>
-                  <th>Symbol</th>
-                  <th>Quantity</th>
-                  <th>Avg Price</th>
-                  <th>Current Price</th>
-                  <th>Invested</th>
-                  <th>Current Value</th>
-                  <th>P&L</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {portfolio.map((stock) => (
-                  <tr key={stock.id}>
-                    <td className="symbol">{stock.symbol}</td>
-                    <td>{stock.quantity}</td>
-                    <td>₹{stock.avg_price.toFixed(2)}</td>
-                    <td>₹{stock.currentPrice.toFixed(2)}</td>
-                    <td>₹{stock.totalInvested.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                    <td>₹{stock.currentValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                    <td className={stock.profitLoss >= 0 ? 'profit' : 'loss'}>
-                      {stock.profitLoss >= 0 ? '+' : ''}₹{stock.profitLoss.toFixed(2)}
-                      <br />
-                      <span className="percent">({stock.profitLossPercent}%)</span>
-                    </td>
-                    <td>
-                      <button 
-                        className="sell-btn" 
-                        onClick={() => openSellModal(stock)}
-                      >
-                        Sell
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <button
+            onClick={() => (window.location.href = '/login')}
+            className="px-8 py-3 rounded-full text-lg font-semibold text-white bg-gradient-to-r from-[#B88BFF] to-[#FFD3E0] 
+              shadow-lg hover:shadow-[0_0_25px_rgba(184,139,255,0.8)] 
+              transform hover:scale-105 transition-all duration-500 ease-out"
+          >
+            Login / Signup
+          </button>
         )}
       </div>
 
-      {/* Sell Modal */}
-      {sellModal.show && (
-        <div className="modal-overlay" onClick={() => setSellModal({ show: false, stock: null })}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Sell {sellModal.stock.symbol}</h2>
-            <div className="modal-info">
-              <p>Available Quantity: <strong>{sellModal.stock.quantity}</strong></p>
-              <p>Current Price: <strong>₹{sellModal.stock.currentPrice.toFixed(2)}</strong></p>
-            </div>
-            
-            <div className="form-group">
-              <label>Quantity to Sell:</label>
-              <input
-                type="number"
-                min="1"
-                max={sellModal.stock.quantity}
-                value={sellQuantity}
-                onChange={(e) => setSellQuantity(e.target.value)}
-                placeholder="Enter quantity"
-              />
-            </div>
-
-            {sellQuantity > 0 && (
-              <div className="sell-summary">
-                <p>You will receive: <strong>₹{(sellQuantity * sellModal.stock.currentPrice).toFixed(2)}</strong></p>
+      {loading ? (
+        <p className="text-gray-400 text-center mt-20">Loading portfolio...</p>
+      ) : portfolio.length === 0 ? (
+        <div className="text-center mt-20">
+          <p className="text-gray-400">No investments yet.</p>
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {portfolio.map((item) => (
+            <div
+              key={item.id}
+              onClick={() => handleStockClick(item.symbol)} // ✅ Click → navigate
+              className="cursor-pointer bg-[#151521] rounded-xl p-6 shadow-lg border border-[#2A2A40]
+                         hover:border-[#B88BFF] hover:shadow-[0_0_25px_rgba(184,139,255,0.5)]
+                         transform hover:scale-105 transition-all duration-300 ease-out"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">{item.symbol}</h2>
+                <div className="p-2 bg-green-900 bg-opacity-30 rounded-lg">
+                  <TrendingUp className="w-5 h-5 text-green-400" />
+                </div>
               </div>
-            )}
-
-            <div className="modal-actions">
-              <button className="btn-cancel" onClick={() => setSellModal({ show: false, stock: null })}>
-                Cancel
-              </button>
-              <button className="btn-sell" onClick={handleSell}>
-                Confirm Sell
-              </button>
+              <p className="text-gray-300">{item.name}</p>
+              <p className="mt-2 text-gray-400 text-sm">
+                Quantity: <span className="text-white font-semibold">{item.quantity}</span>
+              </p>
+              <p className="text-gray-400 text-sm">
+                Buy Price: <span className="text-white font-semibold">₹{item.buy_price}</span>
+              </p>
+              <p className="text-gray-400 text-sm">
+                Current Price:{" "}<span className="text-white font-semibold">₹{livePrices[item.symbol.toUpperCase()]?.toFixed(2) || "—"}</span>
+              </p>
+              <p className="text-gray-400 text-sm">
+                Total Cost: <span className="text-white font-semibold">₹{item.total_cost}</span>
+              </p>
+              <p className="text-gray-400 text-sm mt-2">
+                Purchased: {new Date(item.purchase_date).toLocaleDateString()}
+              </p>
             </div>
-          </div>
+          ))}
         </div>
       )}
     </div>
   );
-};
-
-export default Portfolio;
+}

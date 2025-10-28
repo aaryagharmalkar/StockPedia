@@ -232,7 +232,7 @@ const LoginSignup = () => {
 
         {!isLogin && (
           <div className="mt-6 bg-white/5 border border-white/30 rounded-lg p-4 text-center transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(255,255,255,0.3)]">
-            <p className="text-white font-medium">🎁 Get ₹10,000 virtual money on signup!</p>
+            <p className="text-white font-medium">🎁 Get ₹10,00,000 virtual money on signup!</p>
           </div>
         )}
       </div>

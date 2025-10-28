@@ -9,6 +9,8 @@ export function StockChart({ symbol, currentPrice, change, predictedPrice }) {
   const [processing, setProcessing] = useState(false);
   const [portfolioHoldings, setPortfolioHoldings] = useState([]);
   const [totalOwnedShares, setTotalOwnedShares] = useState(0);
+  const [walletBalance, setWalletBalance] = useState(0);
+const [user, setUser] = useState(null);
 
   // Fetch user's portfolio holdings for this stock
   useEffect(() => {
@@ -33,6 +35,25 @@ export function StockChart({ symbol, currentPrice, change, predictedPrice }) {
       fetchHoldings();
     }
   }, [symbol]);
+  
+  useEffect(() => {
+  const fetchUserAndBalance = async () => {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData?.user) return;
+    setUser(userData.user);
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("balance")
+      .eq("id", userData.user.id)
+      .single();
+
+    if (!profileError && profile) setWalletBalance(profile.balance || 0);
+  };
+
+  fetchUserAndBalance();
+}, []);
+
 
   // Generate candlestick data
   const generateCandlestickData = () => {
@@ -111,109 +132,140 @@ export function StockChart({ symbol, currentPrice, change, predictedPrice }) {
 
   // Handle buy stock
   const handleBuyStock = async () => {
-    if (quantity <= 0) return;
+  if (quantity <= 0) return;
 
-    setProcessing(true);
-    try {
-      const totalPrice = currentPrice * quantity;
-      
-      const { data, error } = await supabase
-        .from("portfolio")
-        .insert([
-          {
-            symbol: symbol,
-            name: symbol, // You might want to pass the full name as a prop
-            quantity: quantity,
-            buy_price: currentPrice,
-            total_cost: totalPrice,
-            currency: "INR",
-            purchase_date: new Date().toISOString(),
-          },
-        ]);
+  setProcessing(true);
+  try {
+    const totalPrice = currentPrice * quantity;
+    if (!user) throw new Error("User not logged in.");
 
-      if (error) throw error;
-
-      alert(`Successfully bought ${quantity} shares of ${symbol}`);
-      setShowBuyModal(false);
-      setQuantity(1);
-      
-      // Refresh holdings
-      const { data: holdings } = await supabase
-        .from('portfolio')
-        .select('*')
-        .eq('symbol', symbol);
-      setPortfolioHoldings(holdings || []);
-      const total = (holdings || []).reduce((sum, holding) => sum + holding.quantity, 0);
-      setTotalOwnedShares(total);
-    } catch (err) {
-      console.error("Error buying stock:", err);
-      alert(`Failed to buy stock: ${err.message}`);
-    } finally {
+    // ✅ Check wallet balance
+    if (walletBalance < totalPrice) {
+      alert("Insufficient funds in your wallet.");
       setProcessing(false);
-    }
-  };
-
-  // Handle sell stock
-  const handleSellStock = async () => {
-    if (quantity <= 0 || quantity > totalOwnedShares) {
-      alert('Invalid quantity');
       return;
     }
 
-    setProcessing(true);
-    try {
-      let remainingToSell = quantity;
-      
-      // Sell using FIFO (First In First Out)
-      for (const holding of portfolioHoldings.sort((a, b) => 
-        new Date(a.purchase_date) - new Date(b.purchase_date)
-      )) {
-        if (remainingToSell <= 0) break;
+    // Insert into portfolio
+    const { data, error } = await supabase.from("portfolio").insert([
+      {
+        user_id: user.id,
+        symbol: symbol,
+        name: symbol,
+        quantity,
+        buy_price: currentPrice,
+        total_cost: totalPrice,
+        currency: "INR",
+        purchase_date: new Date().toISOString(),
+      },
+    ]);
 
-        if (holding.quantity <= remainingToSell) {
-          // Delete entire holding
-          const { error } = await supabase
-            .from('portfolio')
-            .delete()
-            .eq('id', holding.id);
-          
-          if (error) throw error;
-          remainingToSell -= holding.quantity;
-        } else {
-          // Update holding with reduced quantity
-          const newQuantity = holding.quantity - remainingToSell;
-          const { error } = await supabase
-            .from('portfolio')
-            .update({
-              quantity: newQuantity,
-              total_cost: holding.buy_price * newQuantity
-            })
-            .eq('id', holding.id);
-          
-          if (error) throw error;
-          remainingToSell = 0;
-        }
+    if (error) throw error;
+
+    // ✅ Deduct from wallet balance
+    const newBalance = walletBalance - totalPrice;
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ balance: newBalance })
+      .eq("id", user.id);
+
+    if (updateError) throw updateError;
+    setWalletBalance(newBalance);
+
+    alert(`✅ Bought ${quantity} shares of ${symbol}`);
+    setShowBuyModal(false);
+    setQuantity(1);
+
+    // Refresh holdings
+    const { data: holdings } = await supabase
+      .from("portfolio")
+      .select("*")
+      .eq("symbol", symbol)
+      .eq("user_id", user.id);
+    setPortfolioHoldings(holdings || []);
+    const total = (holdings || []).reduce((sum, h) => sum + h.quantity, 0);
+    setTotalOwnedShares(total);
+  } catch (err) {
+    console.error("Error buying stock:", err);
+    alert(`Failed to buy stock: ${err.message}`);
+  } finally {
+    setProcessing(false);
+  }
+};
+
+  // Handle sell stock
+  const handleSellStock = async () => {
+  if (quantity <= 0 || quantity > totalOwnedShares) {
+    alert("Invalid quantity");
+    return;
+  }
+
+  setProcessing(true);
+  try {
+    let remainingToSell = quantity;
+    let totalSaleValue = 0;
+
+    // FIFO sale
+    for (const holding of portfolioHoldings.sort(
+      (a, b) => new Date(a.purchase_date) - new Date(b.purchase_date)
+    )) {
+      if (remainingToSell <= 0) break;
+
+      if (holding.quantity <= remainingToSell) {
+        const { error } = await supabase
+          .from("portfolio")
+          .delete()
+          .eq("id", holding.id);
+
+        if (error) throw error;
+        totalSaleValue += holding.quantity * currentPrice;
+        remainingToSell -= holding.quantity;
+      } else {
+        const newQuantity = holding.quantity - remainingToSell;
+        const { error } = await supabase
+          .from("portfolio")
+          .update({
+            quantity: newQuantity,
+            total_cost: holding.buy_price * newQuantity,
+          })
+          .eq("id", holding.id);
+
+        if (error) throw error;
+        totalSaleValue += remainingToSell * currentPrice;
+        remainingToSell = 0;
       }
-
-      alert(`Successfully sold ${quantity} shares of ${symbol}`);
-      setShowSellModal(false);
-      setQuantity(1);
-      
-      // Refresh holdings
-      const { data: holdings } = await supabase
-        .from('portfolio')
-        .select('*')
-        .eq('symbol', symbol);
-      setPortfolioHoldings(holdings || []);
-      const total = (holdings || []).reduce((sum, holding) => sum + holding.quantity, 0);
-      setTotalOwnedShares(total);
-    } catch (err) {
-      console.error("Error selling stock:", err);
-      alert(`Failed to sell stock: ${err.message}`);
-    } finally {
-      setProcessing(false);
     }
-  };
+
+    // ✅ Add sale proceeds to wallet
+    const newBalance = walletBalance + totalSaleValue;
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ balance: newBalance })
+      .eq("id", user.id);
+
+    if (updateError) throw updateError;
+    setWalletBalance(newBalance);
+
+    alert(`✅ Sold ${quantity} shares of ${symbol}`);
+    setShowSellModal(false);
+    setQuantity(1);
+
+    // Refresh holdings
+    const { data: holdings } = await supabase
+      .from("portfolio")
+      .select("*")
+      .eq("symbol", symbol)
+      .eq("user_id", user.id);
+    setPortfolioHoldings(holdings || []);
+    const total = (holdings || []).reduce((sum, h) => sum + h.quantity, 0);
+    setTotalOwnedShares(total);
+  } catch (err) {
+    console.error("Error selling stock:", err);
+    alert(`Failed to sell stock: ${err.message}`);
+  } finally {
+    setProcessing(false);
+  }
+};
 
   return (
     <div className="bg-gray-900 rounded-lg p-6 text-white">
