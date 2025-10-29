@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { StockChart } from "./StockChart";
 import axios from "axios";
-import { supabase } from "./supabaseClient";
+import { supabase } from "./SupabaseClient";
 import { motion } from "framer-motion";
 import { Star, Loader2 } from "lucide-react";
 import logo from "../assets/logo.jpg"; // ✅ StockPedia logo
@@ -131,7 +131,6 @@ export const MarketWatch = ({ onStockSelect, selectedStock }) => {
         className="flex justify-between items-center mb-10"
       >
         <div className="flex items-center gap-3">
-          <img src={logo} alt="StockPedia" className="w-10 h-10 rounded-full border border-white" />
           <h1 className="text-3xl font-bold tracking-wide">Market Watch</h1>
         </div>
         <div className="text-sm text-gray-400">{watchlistSymbols.size} in watchlist</div>
@@ -145,7 +144,7 @@ export const MarketWatch = ({ onStockSelect, selectedStock }) => {
       >
         <input
           type="text"
-          placeholder="🔍 Search stocks..."
+          placeholder="Search stocks..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full p-4 bg-[#1b2238] text-white placeholder-gray-400 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#B88BFF]"

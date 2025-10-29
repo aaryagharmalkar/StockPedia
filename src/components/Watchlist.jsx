@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "./supabaseClient";
+import { supabase } from "./SupabaseClient";
 import { StockChart } from "./StockChart";
 import axios from "axios";
 import { TrendingUp, TrendingDown, X, Plus, ArrowLeft } from "lucide-react";
@@ -109,9 +109,8 @@ const Watchlist = () => {
 
   const showToast = (message, type) => {
     const toast = document.createElement("div");
-    toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
-      type === "success" ? "bg-green-500" : "bg-red-500"
-    } text-white font-medium`;
+    toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${type === "success" ? "bg-green-500" : "bg-red-500"
+      } text-white font-medium`;
     toast.textContent = message;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
@@ -151,27 +150,9 @@ const Watchlist = () => {
           animate={{ opacity: 1, y: 0 }}
           className="flex justify-between items-center mb-10"
         >
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate("/")}
-              className="p-2 hover:bg-[#B88BFF]/10 rounded-lg transition-all"
-            >
-              <ArrowLeft className="w-6 h-6 text-[#FFD3E0]" />
-            </button>
-            <div className="flex items-center gap-3">
-              <img src={logo} alt="StockPedia" className="w-10 h-10 rounded-full border border-white" />
-              <h1 className="text-3xl font-bold text-white tracking-wide">My Watchlist</h1>
-            </div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-wide">My Watchlist</h1>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.97 }}
-            className="px-6 py-3 bg-gradient-to-r from-[#B88BFF] to-[#FFD3E0] rounded-lg font-semibold text-black hover:shadow-[0_0_20px_#B88BFF] transition-all flex items-center gap-2"
-            onClick={() => setAddModal(true)}
-          >
-            <Plus className="w-5 h-5" />
-            Add Stock
-          </motion.button>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -184,62 +165,68 @@ const Watchlist = () => {
             <div className="bg-[#141a2e] border border-white/20 rounded-xl p-4 shadow-lg">
               <h2 className="text-xl font-bold mb-4 text-white">Tracked Stocks</h2>
               <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-                {watchlist.map((stock) => {
-                  const liveData = stockData[stock.stock_symbol];
-                  const isSelected = selectedStock === stock.stock_symbol;
-                  return (
-                    <motion.div
-                      key={stock.id}
-                      whileHover={{ scale: 1.02, boxShadow: "0 0 15px rgba(184,139,255,0.5)" }}
-                      onClick={() => setSelectedStock(stock.stock_symbol)}
-                      className={`p-4 rounded-xl cursor-pointer border transition-all ${
-                        isSelected
-                          ? "border-[#FFD3E0] bg-gradient-to-r from-[#B88BFF]/30 to-[#FFD3E0]/30"
-                          : "border-white/10 bg-[#1a1f35] hover:border-[#B88BFF]/60"
-                      }`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <h3 className="text-lg font-bold">{stock.stock_symbol}</h3>
-                          <p className="text-gray-400 text-sm">{liveData?.name || "Loading..."}</p>
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemove(stock.stock_symbol);
-                          }}
-                          className="p-1 hover:bg-red-500/20 rounded-full transition-colors"
-                        >
-                          <X className="w-5 h-5 text-red-400" />
-                        </button>
-                      </div>
-                      {liveData && (
-                        <div className="flex justify-between items-center mt-3">
-                          <span className="text-xl font-bold">
-                            {liveData.currency === "INR" ? "₹" : "$"}
-                            {liveData.price?.toFixed(2)}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            {liveData.percentChange >= 0 ? (
-                              <TrendingUp className="w-4 h-4 text-green-400" />
-                            ) : (
-                              <TrendingDown className="w-4 h-4 text-red-400" />
-                            )}
-                            <span
-                              className={`font-semibold ${
-                                liveData.percentChange >= 0 ? "text-green-400" : "text-red-400"
-                              }`}
-                            >
-                              {liveData.percentChange >= 0 ? "+" : ""}
-                              {liveData.percentChange?.toFixed(2)}%
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </motion.div>
-                  );
-                })}
+                 {watchlist.length === 0 ? (
+    <div className="text-center text-gray-400 py-10 text-lg">
+      No stocks in watchlist
+    </div>
+  ) : (
+    watchlist.map((stock) => {
+      const liveData = stockData[stock.stock_symbol];
+      const isSelected = selectedStock === stock.stock_symbol;
+      return (
+        <motion.div
+          key={stock.id}
+          whileHover={{ scale: 1.02, boxShadow: "0 0 15px rgba(184,139,255,0.5)" }}
+          onClick={() => setSelectedStock(stock.stock_symbol)}
+          className={`p-4 rounded-xl cursor-pointer border transition-all ${
+            isSelected
+              ? "border-[#FFD3E0] bg-gradient-to-r from-[#B88BFF]/30 to-[#FFD3E0]/30"
+              : "border-white/10 bg-[#1a1f35] hover:border-[#B88BFF]/60"
+          }`}
+        >
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-lg font-bold">{stock.stock_symbol}</h3>
+              <p className="text-gray-400 text-sm">{liveData?.name || "Loading..."}</p>
+            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRemove(stock.stock_symbol);
+              }}
+              className="p-1 hover:bg-red-500/20 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5 text-red-400" />
+            </button>
+          </div>
+          {liveData && (
+            <div className="flex justify-between items-center mt-3">
+              <span className="text-xl font-bold">
+                {liveData.currency === "INR" ? "₹" : "$"}
+                {liveData.price?.toFixed(2)}
+              </span>
+              <div className="flex items-center gap-1">
+                {liveData.percentChange >= 0 ? (
+                  <TrendingUp className="w-4 h-4 text-green-400" />
+                ) : (
+                  <TrendingDown className="w-4 h-4 text-red-400" />
+                )}
+                <span
+                  className={`font-semibold ${
+                    liveData.percentChange >= 0 ? "text-green-400" : "text-red-400"
+                  }`}
+                >
+                  {liveData.percentChange >= 0 ? "+" : ""}
+                  {liveData.percentChange?.toFixed(2)}%
+                </span>
               </div>
+            </div>
+          )}
+        </motion.div>
+      );
+    })
+  )}
+</div>
             </div>
           </motion.div>
 
@@ -266,9 +253,8 @@ const Watchlist = () => {
                         {currentStockData.price?.toFixed(2)}
                       </div>
                       <span
-                        className={`text-2xl font-semibold ${
-                          currentStockData.percentChange >= 0 ? "text-green-400" : "text-red-400"
-                        }`}
+                        className={`text-2xl font-semibold ${currentStockData.percentChange >= 0 ? "text-green-400" : "text-red-400"
+                          }`}
                       >
                         {currentStockData.percentChange >= 0 ? "+" : ""}
                         {currentStockData.percentChange?.toFixed(2)}%
@@ -318,49 +304,6 @@ const Watchlist = () => {
           </motion.div>
         </div>
       </div>
-
-      {/* Add Stock Modal */}
-      {addModal && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4"
-          onClick={() => setAddModal(false)}
-        >
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-[#141a2e] border border-white/20 rounded-2xl p-8 w-full max-w-md text-white shadow-[0_0_20px_rgba(184,139,255,0.5)]"
-          >
-            <div className="flex items-center gap-3 mb-6">
-              <img src={logo} alt="StockPedia" className="w-8 h-8 rounded-full border border-white" />
-              <h2 className="text-2xl font-bold">Add Stock to Watchlist</h2>
-            </div>
-            <input
-              type="text"
-              value={newSymbol}
-              onChange={(e) => setNewSymbol(e.target.value)}
-              placeholder="Enter stock symbol (e.g. RELIANCE.NS)"
-              className="w-full p-4 mb-6 bg-[#1b2238] border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#B88BFF]"
-            />
-            <div className="flex gap-3">
-              <button
-                className="flex-1 px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-all"
-                onClick={() => setAddModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAdd}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-[#B88BFF] to-[#FFD3E0] text-black font-semibold rounded-lg hover:shadow-[0_0_15px_#B88BFF] transition-all"
-              >
-                Add Stock
-              </button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
     </div>
   );
 };

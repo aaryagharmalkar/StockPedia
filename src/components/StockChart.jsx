@@ -97,7 +97,7 @@ const [user, setUser] = useState(null);
   const scaleVolume = (volume) => (volume / maxVolume) * volumeHeight;
 
   // Generate months for x-axis
-  const months = ['May', 'Jun', 'Jul', 'Sep', 'Sep'];
+  const months = ['Jul', 'Sep', 'Sep', 'Oct', 'Nov'];
   
   // Moving average calculation
   const calculateMA = (period) => {
@@ -284,41 +284,6 @@ const [user, setUser] = useState(null);
           </div>
         )}
       </div>
-
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6">
-        <button
-          onClick={() => setActiveTab('prediction')}
-          className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-            activeTab === 'prediction'
-              ? 'bg-gray-700 text-white'
-              : 'bg-gray-800 text-gray-400 hover:bg-gray-750'
-          }`}
-        >
-          Price Prediction
-        </button>
-        <button
-          onClick={() => setActiveTab('technical')}
-          className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-            activeTab === 'technical'
-              ? 'bg-gray-700 text-white'
-              : 'bg-gray-800 text-gray-400 hover:bg-gray-750'
-          }`}
-        >
-          Technical Indicators
-        </button>
-        <button
-          onClick={() => setActiveTab('news')}
-          className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-            activeTab === 'news'
-              ? 'bg-gray-700 text-white'
-              : 'bg-gray-800 text-gray-400 hover:bg-gray-750'
-          }`}
-        >
-          News
-        </button>
-      </div>
-
       {/* Chart Container */}
       <div className="bg-gray-800 rounded-lg p-4">
         {/* SVG Chart */}
