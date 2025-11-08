@@ -32,7 +32,7 @@ router.post('/signup', async (req, res) => {
         id: authData.user.id,
         email: authData.user.email,
         username,
-        wallet_balance: 10000 // Default ₹10,000
+        wallet_balance: 1000000 // Default ₹10,000
       })
       .select()
       .single();
