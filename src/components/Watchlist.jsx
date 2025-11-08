@@ -56,7 +56,7 @@ const Watchlist = () => {
   // ✅ Fetch live stock data
   const fetchLiveStockData = async () => {
     try {
-      const { data } = await axios.get("http://localhost:5050/api/live");
+      const { data } = await axios.get("https://stockpedia.onrender.com/api/live");
       const dataMap = {};
       data.forEach(stock => {
         dataMap[stock.symbol] = stock;

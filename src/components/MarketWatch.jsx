@@ -41,7 +41,7 @@ export const MarketWatch = ({ onStockSelect, selectedStock }) => {
   useEffect(() => {
     const fetchStocks = async () => {
       try {
-        const { data } = await axios.get("http://localhost:5050/api/live");
+        const { data } = await axios.get("https://stockpedia.onrender.com/api/live");
         setStocks(data);
         if (!chartStock && data.length > 0) {
           setChartStock(selectedStock || data[0]?.symbol);

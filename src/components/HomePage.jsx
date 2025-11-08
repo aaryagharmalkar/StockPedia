@@ -73,7 +73,7 @@ export function HomePage() {
     const fetchStocks = async () => {
       try {
         setLoading(true);
-        const { data } = await axios.get("http://localhost:5050/api/live");
+        const { data } = await axios.get("https://stockpedia.onrender.com/api/live");
 
         const indexData = data
           .filter(

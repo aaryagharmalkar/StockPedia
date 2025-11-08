@@ -8,7 +8,7 @@ export const StockTicker = () => {
   useEffect(() => {
     const fetchStocks = async () => {
       try {
-        const { data } = await axios.get("http://localhost:5050/api/live");
+        const { data } = await axios.get("https://stockpedia.onrender.com/api/live");
         console.log("Ticker data:", data);
 
         // ✅ Only include tradable stocks (exclude indices)

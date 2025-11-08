@@ -59,7 +59,7 @@ export default function PortfolioPage() {
   useEffect(() => {
     const fetchLivePrices = async () => {
       try {
-        const { data } = await axios.get("http://localhost:5050/api/live");
+        const { data } = await axios.get("https://stockpedia.onrender.com/api/live");
         const pricesMap = {};
         data.forEach(stock => {
           pricesMap[stock.symbol.toUpperCase()] = parseFloat(stock.price);
